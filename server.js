@@ -4,6 +4,8 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 
 const app = express();
+
+// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -99,8 +101,10 @@ app.get('/webhook', (req, res) => {
   const challenge = req.query['hub.challenge'];
 
   if (mode && token && mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+    console.log("✅ Webhook verificado");
     res.status(200).send(challenge);
   } else {
+    console.log("❌ Token inválido");
     res.sendStatus(403);
   }
 });
@@ -189,7 +193,6 @@ app.post('/webhook', async (req, res) => {
           from,
           "📐 ¿Cuántos metros cuadrados tiene su inmueble?\n\n1. 0-50 m²\n2. 51-100 m²\n3. 101-200 m²\n4. Más de 200 m²"
         );
-
         user.state = STATE.AREA;
         break;
 
@@ -302,19 +305,88 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// Rutas para el monitor web (usadas desde Blogspot)
+// Ruta /monitor - Interfaz web tipo WhatsApp Web
+app.get('/monitor', (req, res) => {
+  let html = `
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>📲 Monitor de Asesores</title>
+        <meta http-equiv="refresh" content="10">
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+          body { background-color: #ece5dd; color: #000; padding: 20px; }
+          h2 { margin-bottom: 20px; }
+          .chat-container { display: flex; flex-direction: column; max-width: 600px; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+          .message { max-width: 70%; padding: 12px 16px; border-radius: 10px; clear: both; word-wrap: break-word; position: relative; line-height: 1.4em; }
+          .from-client { align-self: flex-start; background-color: #ffffff; float: left; border-top-right-radius: 4px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; }
+          .from-bot { align-self: flex-end; background-color: #dcf8c6; float: right; border-top-left-radius: 4px; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }
+          .timestamp { font-size: 0.7em; color: gray; margin-top: 5px; text-align: right; margin-right: 10px; }
+          .input-area { margin-top: 10px; display: flex; gap: 10px; }
+          input[type=text] { flex: 1; padding: 10px; border: none; border-radius: 5px; font-size: 1em; }
+          button { padding: 10px 15px; background-color: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        </style>
+      </head>
+      <body>
+        <h2>📞 Clientes que requieren asesoría</h2>
+  `;
+
+  for (const from in conversations) {
+    const chat = conversations[from];
+
+    // Solo muestra clientes que dijeron "sí, por favor"
+    const lastMsg = chat.responses[chat.responses.length - 1];
+    if (!lastMsg || lastMsg.text !== "sí, por favor") continue;
+
+    html += `<div class="chat-container"><strong>Cliente: ${from}</strong><br />`;
+
+    chat.responses.forEach(msg => {
+      const time = msg.timestamp.toLocaleTimeString();
+      if (msg.from === 'cliente') {
+        html += `
+          <div class="message from-client">${msg.text}</div>
+          <small class="timestamp">(${time})</small><br /><br />
+        `;
+      } else {
+        html += `
+          <div class="message from-bot">${msg.text}</div>
+          <small class="timestamp">(${time})</small><br /><br />
+        `;
+      }
+    });
+
+    // Campo para responder manualmente
+    html += `
+      <form class="input-area" action="/api/send" method="POST">
+        <input type="hidden" name="to" value="${from}" />
+        <input type="text" name="message" placeholder="Escribe tu mensaje..." required />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>`;
+  }
+
+  html += `
+      </body>
+    </html>
+  `;
+
+  res.send(html);
+});
+
+// Ruta /api/chats - Devuelve todas las conversaciones
 app.get('/api/chats', (req, res) => {
   res.send(conversations);
 });
 
+// Ruta /api/chat/:from - Devuelve un chat específico
 app.get('/api/chat/:from', (req, res) => {
   const from = req.params.from;
   res.send(conversations[from] || { responses: [] });
 });
 
+// Ruta /api/send - Permite enviar mensajes manuales
 app.post('/api/send', express.json(), async (req, res) => {
   const { to, message } = req.body;
-
   if (!to || !message) return res.status(400).send("Faltan datos");
 
   try {
