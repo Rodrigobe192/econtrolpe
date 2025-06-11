@@ -154,7 +154,7 @@ app.post('/webhook', async (req, res) => {
   }
 
   try {
-    switch(user.state) {
+    switch (user.state) {
       case STATE.START:
         await sendTextMessage(
           from,
@@ -274,7 +274,6 @@ app.post('/webhook', async (req, res) => {
             serviceType: user.serviceType,
             contact: user.contact
           });
-
           console.log("✅ Datos enviados a Google Sheets");
 
           await sendTextMessage(
@@ -291,7 +290,6 @@ app.post('/webhook', async (req, res) => {
             "⚠️ Hubo un error guardando sus datos. Por favor, inténtelo más tarde."
           );
         }
-
         break;
     }
 
@@ -364,21 +362,6 @@ app.get('/monitor', (req, res) => {
             transform: scale(1.01);
           }
 
-          .chat-item strong {
-            display: block;
-            font-size: 1em;
-          }
-
-          .chat-item small {
-            display: block;
-            font-size: 0.8em;
-            color: #333;
-            margin-top: 4px;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-          }
-
           .selected-chat {
             flex: 1;
             display: flex;
@@ -401,7 +384,6 @@ app.get('/monitor', (req, res) => {
             padding: 12px 16px;
             border-radius: 10px;
             word-wrap: break-word;
-            position: relative;
             line-height: 1.4em;
             clear: both;
             margin: 5px;
@@ -428,7 +410,6 @@ app.get('/monitor', (req, res) => {
           .timestamp {
             font-size: 0.7em;
             color: gray;
-            margin-top: 5px;
             text-align: right;
             margin-right: 10px;
           }
@@ -470,7 +451,6 @@ app.get('/monitor', (req, res) => {
             <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"  alt="Logo" style="width: 30px; height: 30px;" />
             <span>Econtrol Bot</span>
           </div>
-
           <div class="chat-list" id="chatList"></div>
         </div>
 
@@ -479,9 +459,7 @@ app.get('/monitor', (req, res) => {
             <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
             <span id="chatName">Selecciona un chat</span>
           </div>
-
           <div class="chat-messages" id="chatBox"></div>
-
           <form class="input-area" id="chatForm">
             <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
             <button type="submit">Enviar</button>
@@ -580,8 +558,56 @@ app.get('/monitor', (req, res) => {
 
   res.send(html);
 });
+
+// Ruta /api/chats - Devuelve todas las conversaciones
+app.get('/api/chats', (req, res) => {
+  res.json(conversations);
+});
+
+// Ruta /api/chat/:from - Devuelve un chat específico
+app.get('/api/chat/:from', (req, res) => {
+  const from = req.params.from;
+  res.json(conversations[from] || { responses: [] });
+});
+
+// Ruta /api/send - Permite enviar mensajes manuales
+app.post('/api/send', express.json(), async (req, res) => {
+  const { to, message } = req.body;
+  if (!to || !message) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    await axios.post(
+      \`https://graph.facebook.com/v22.0/\${process.env.PHONE_NUMBER_ID}/messages\`, 
+      {
+        messaging_product: "whatsapp",
+        to,
+        text: { body: message },
+      },
+      {
+        headers: {
+          Authorization: \`Bearer \${process.env.WHATSAPP_TOKEN}\`
+        }
+      }
+    );
+
+    // Guardar mensaje del asesor
+    if (!conversations[to]) conversations[to] = { responses: [] };
+    conversations[to].responses.push({
+      from: 'bot',
+      text: message,
+      timestamp: new Date()
+    });
+
+    res.json({ status: "ok" });
+
+  } catch (err) {
+    console.error("🚨 Error al enviar mensaje:", err.message);
+    res.json({ status: "error", error: err.message });
+  }
+});
+
 // Puerto dinámico
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(\`🚀 Servidor corriendo en puerto \${PORT}\`);
 });
