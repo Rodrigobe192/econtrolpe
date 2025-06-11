@@ -109,7 +109,7 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-// Webhook para recibir mensajes
+// Webhook POST - Recepción de mensajes de WhatsApp
 app.post('/webhook', async (req, res) => {
   const body = req.body;
 
@@ -154,7 +154,7 @@ app.post('/webhook', async (req, res) => {
   }
 
   try {
-    switch (user.state) {
+    switch(user.state) {
       case STATE.START:
         await sendTextMessage(
           from,
@@ -211,7 +211,6 @@ app.post('/webhook', async (req, res) => {
           from,
           "⚙️ ¿Qué servicio necesita?\n\n1. Desinsectación Integral\n2. Fumigación de mercaderías\n3. Control y Monitoreo de Roedores\n4. Desinfección de ambientes\n5. Limpieza de Cisterna/Reservorios\n6. Limpieza de Pozos Sépticos\n7. Mantenimiento de Trampas de Grasa\n8. Otro servicio"
         );
-
         user.state = STATE.SERVICE;
         break;
 
@@ -230,7 +229,6 @@ app.post('/webhook', async (req, res) => {
           from,
           "⚠️ ¿El servicio es Preventivo o Correctivo?\n\n1. Preventivo (mantenimiento regular)\n2. Correctivo (solución a problema existente)"
         );
-
         user.state = STATE.SERVICE_TYPE;
         break;
 
@@ -249,7 +247,6 @@ app.post('/webhook', async (req, res) => {
           from,
           "📞 ¿Desea que un asesor le contacte?\n\n1. Sí, por favor\n2. No, gracias"
         );
-
         user.state = STATE.CONTACT;
         break;
 
@@ -305,53 +302,105 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// Ruta /monitor - Interfaz web tipo WhatsApp Web
+// Ruta /monitor – Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
-        <meta charset="UTF-8" />
-        <title>📲 Monitor de Asesores</title>
-        <meta http-equiv="refresh" content="10">
+        <meta charset="UTF-8">
+        <title>📲 Monitor de Conversaciones</title>
+        <meta http-equiv="refresh" content="10"> <!-- Actualiza cada 10 segundos -->
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-          body { background-color: #ece5dd; color: #000; padding: 20px; }
+          * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+          body { background: #ece5dd; color: black; padding: 20px; }
           h2 { margin-bottom: 20px; }
           .chat-container { display: flex; flex-direction: column; max-width: 600px; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-          .message { max-width: 70%; padding: 12px 16px; border-radius: 10px; clear: both; word-wrap: break-word; position: relative; line-height: 1.4em; }
-          .from-client { align-self: flex-start; background-color: #ffffff; float: left; border-top-right-radius: 4px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; }
-          .from-bot { align-self: flex-end; background-color: #dcf8c6; float: right; border-top-left-radius: 4px; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }
-          .timestamp { font-size: 0.7em; color: gray; margin-top: 5px; text-align: right; margin-right: 10px; }
-          .input-area { margin-top: 10px; display: flex; gap: 10px; }
-          input[type=text] { flex: 1; padding: 10px; border: none; border-radius: 5px; font-size: 1em; }
-          button { padding: 10px 15px; background-color: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer; }
+
+          .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            clear: both;
+            word-wrap: break-word;
+            line-height: 1.4em;
+          }
+
+          .from-client {
+            align-self: flex-start;
+            background-color: #ffffff;
+            float: left;
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+          }
+
+          .from-bot {
+            align-self: flex-end;
+            background-color: #dcf8c6;
+            float: right;
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+          }
+
+          .timestamp {
+            font-size: 0.7em;
+            color: gray;
+            margin-top: 5px;
+            text-align: right;
+            margin-right: 10px;
+          }
+
+          .input-area {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+          }
+
+          input[type=text], textarea {
+            padding: 10px;
+            width: 100%;
+            max-width: 400px;
+            border: none;
+            border-radius: 5px;
+          }
+
+          button {
+            padding: 10px 15px;
+            background: #25D366;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+          }
         </style>
       </head>
       <body>
-        <h2>📞 Clientes que requieren asesoría</h2>
+        <h2>💼 Todos los Clientes</h2>
   `;
 
   for (const from in conversations) {
     const chat = conversations[from];
 
-    // Solo muestra clientes que dijeron "sí, por favor"
-    const lastMsg = chat.responses[chat.responses.length - 1];
-    if (!lastMsg || lastMsg.text !== "sí, por favor") continue;
-
-    html += `<div class="chat-container"><strong>Cliente: ${from}</strong><br />`;
+    html += `
+      <div class="chat-container">
+        <strong>Cliente: ${from}</strong><br />
+    `;
 
     chat.responses.forEach(msg => {
       const time = msg.timestamp.toLocaleTimeString();
       if (msg.from === 'cliente') {
         html += `
-          <div class="message from-client">${msg.text}</div>
-          <small class="timestamp">(${time})</small><br /><br />
-        `;
+          <div style="clear:both;">
+            <div class="message from-client">${msg.text}</div>
+            <small class="timestamp">${time}</small><br />
+          </div>`;
       } else {
         html += `
-          <div class="message from-bot">${msg.text}</div>
-          <small class="timestamp">(${time})</small><br /><br />
-        `;
+          <div style="clear:both;">
+            <div class="message from-bot">${msg.text}</div>
+            <small class="timestamp">${time}</small><br />
+          </div>`;
       }
     });
 
@@ -365,26 +414,23 @@ app.get('/monitor', (req, res) => {
     </div>`;
   }
 
-  html += `
-      </body>
-    </html>
-  `;
+  html += '</body></html>';
 
   res.send(html);
 });
 
-// Ruta /api/chats - Devuelve todas las conversaciones
+// Ruta /api/chats – Devuelve todas las conversaciones en formato JSON
 app.get('/api/chats', (req, res) => {
   res.send(conversations);
 });
 
-// Ruta /api/chat/:from - Devuelve un chat específico
+// Ruta /api/chat/:from – Devuelve un chat específico
 app.get('/api/chat/:from', (req, res) => {
   const from = req.params.from;
   res.send(conversations[from] || { responses: [] });
 });
 
-// Ruta /api/send - Permite enviar mensajes manuales
+// Ruta /api/send – Permite enviar mensajes desde el asesor
 app.post('/api/send', express.json(), async (req, res) => {
   const { to, message } = req.body;
   if (!to || !message) return res.status(400).send("Faltan datos");
@@ -404,7 +450,7 @@ app.post('/api/send', express.json(), async (req, res) => {
       }
     );
 
-    // Guardar mensaje del asesor
+    // Registrar mensaje del asesor
     if (!conversations[to]) conversations[to] = { responses: [] };
     conversations[to].responses.push({
       from: 'bot',
