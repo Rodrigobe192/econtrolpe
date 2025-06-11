@@ -324,6 +324,28 @@ app.get('/monitor', (req, res) => {
             padding: 10px;
           }
 
+          .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background-color: #075e54;
+            font-weight: bold;
+            gap: 10px;
+          }
+
+          .chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+          }
+
+          .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #d9dede;
+          }
+
           .chat-item {
             background-color: #ffffff;
             color: black;
@@ -332,11 +354,29 @@ app.get('/monitor', (req, res) => {
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
           }
 
           .chat-item:hover {
             background-color: #dcf8c6;
             transform: scale(1.01);
+          }
+
+          .chat-item strong {
+            display: block;
+            font-size: 1em;
+          }
+
+          .chat-item small {
+            display: block;
+            font-size: 0.8em;
+            color: #333;
+            margin-top: 4px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
           }
 
           .selected-chat {
@@ -361,7 +401,10 @@ app.get('/monitor', (req, res) => {
             padding: 12px 16px;
             border-radius: 10px;
             word-wrap: break-word;
+            position: relative;
             line-height: 1.4em;
+            clear: both;
+            margin: 5px;
           }
 
           .from-client {
@@ -385,6 +428,7 @@ app.get('/monitor', (req, res) => {
           .timestamp {
             font-size: 0.7em;
             color: gray;
+            margin-top: 5px;
             text-align: right;
             margin-right: 10px;
           }
@@ -403,6 +447,7 @@ app.get('/monitor', (req, res) => {
             border: none;
             border-radius: 5px;
             font-size: 1em;
+            outline: none;
           }
 
           button {
@@ -421,24 +466,22 @@ app.get('/monitor', (req, res) => {
       </head>
       <body>
         <div class="sidebar" style="overflow-y:auto;">
-          <h2>📞 Clientes</h2>
-  `;
+          <div class="chat-header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"  alt="Logo" style="width: 30px; height: 30px;" />
+            <span>Econtrol Bot</span>
+          </div>
 
-  for (const from in conversations) {
-    const lastMsg = conversations[from].responses[conversations[from].responses.length - 1]?.text || "Nuevo cliente";
-    html += `
-      <div class="chat-item" onclick="window.location.href='#${from}'; document.getElementById('${from}').scrollIntoView();">
-        <strong>${from}</strong><br />
-        <small>${lastMsg}</small>
-      </div>`;
-  }
-
-  html += `
+          <div class="chat-list" id="chatList"></div>
         </div>
 
         <div class="selected-chat">
-          <h2 id="chatName">Selecciona un chat</h2>
+          <div class="chat-header" id="chatHeader">
+            <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+            <span id="chatName">Selecciona un chat</span>
+          </div>
+
           <div class="chat-messages" id="chatBox"></div>
+
           <form class="input-area" id="chatForm">
             <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
             <button type="submit">Enviar</button>
@@ -446,54 +489,86 @@ app.get('/monitor', (req, res) => {
         </div>
 
         <script>
-          // Cargar conversaciones si se pasa un hash en la URL
-          const urlParams = new URLSearchParams(window.location.search);
-          const currentChat = window.location.hash.replace('#', '');
+          let currentChat = null;
 
           async function loadChats() {
-            const response = await fetch("/api/chats");
-            const chats = await response.json();
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
 
-            const container = document.getElementById("chatBox");
-            container.innerHTML = "";
+              const chatList = document.getElementById("chatList");
+              chatList.innerHTML = "";
 
-            if (!currentChat || !chats[currentChat]) {
-              container.innerHTML = "<p>Selecciona un cliente.</p>";
-              return;
+              for (const from in chats) {
+                const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+                const item = document.createElement("div");
+                item.className = "chat-item";
+                item.innerHTML = \`
+                  <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+                  <div>
+                    <strong>\${from}</strong><br>
+                    <small>\${lastMsg}</small>
+                  </div>
+                \`;
+                item.onclick = () => openChat(from);
+                chatList.appendChild(item);
+              }
+            } catch (err) {
+              console.error("🚨 Error al cargar clientes:", err.message);
             }
-
-            const chat = chats[currentChat];
-            document.getElementById("chatName").innerText = "Cliente: " + currentChat;
-
-            chat.responses.forEach(msg => {
-              const msgDiv = document.createElement("div");
-              msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
-              msgDiv.innerText = msg.text;
-              container.appendChild(msgDiv);
-
-              const time = document.createElement("small");
-              time.className = "timestamp";
-              time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-              container.appendChild(time);
-            });
-
-            container.scrollTop = container.scrollHeight;
           }
 
-          // Enviar mensaje al cliente
+          async function openChat(from) {
+            currentChat = from;
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = "";
+
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
+              const chat = chats[from];
+
+              document.getElementById("chatName").innerText = from;
+
+              if (!chat || !chat.responses || chat.responses.length === 0) {
+                chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
+                return;
+              }
+
+              chat.responses.forEach(msg => {
+                const msgDiv = document.createElement("div");
+                msgDiv.className = msg.from === "cliente" ? "message from-client" : "message from-bot";
+                msgDiv.innerText = msg.text;
+                chatBox.appendChild(msgDiv);
+
+                const time = document.createElement("small");
+                time.className = "timestamp";
+                time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+                chatBox.appendChild(time);
+              });
+
+              chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+              console.error("❌ Error al abrir chat:", err.message);
+            }
+          }
+
           document.getElementById("chatForm").onsubmit = async (e) => {
             e.preventDefault();
             const message = document.getElementById("messageInput").value.trim();
             if (!message || !currentChat) return;
 
-            await fetch("/api/send", {
+            const response = await fetch("/api/send", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ to: currentChat, message })
             });
 
-            document.getElementById("messageInput").value = "";
-            loadChats();
+            const result = await response.json();
+            if (result.status === "ok") {
+              document.getElementById("messageInput").value = "";
+              openChat(currentChat);
+            }
           };
 
           setInterval(loadChats, 10000); // Recargar automáticamente
@@ -505,7 +580,6 @@ app.get('/monitor', (req, res) => {
 
   res.send(html);
 });
-
 // Puerto dinámico
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
