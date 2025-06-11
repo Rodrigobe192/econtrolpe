@@ -302,25 +302,64 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// Ruta /monitor – Interfaz web estilo WhatsApp Web
+// Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
         <meta charset="UTF-8">
-        <title>📲 Monitor de Conversaciones</title>
+        <title>📲 Monitor de Asesores</title>
         <meta http-equiv="refresh" content="10"> <!-- Actualiza cada 10 segundos -->
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-          body { background: #ece5dd; color: black; padding: 20px; }
-          h2 { margin-bottom: 20px; }
-          .chat-container { display: flex; flex-direction: column; max-width: 600px; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+          body { height: 100vh; display: flex; background-color: #ece5dd; color: black; }
+
+          .sidebar {
+            width: 300px;
+            background-color: #128c7e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 10px;
+          }
+
+          .chat-item {
+            background-color: #ffffff;
+            color: black;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .chat-item:hover {
+            background-color: #dcf8c6;
+            transform: scale(1.01);
+          }
+
+          .selected-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #ece5dd;
+          }
+
+          .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
 
           .message {
             max-width: 70%;
             padding: 12px 16px;
             border-radius: 10px;
-            clear: both;
             word-wrap: break-word;
             line-height: 1.4em;
           }
@@ -346,124 +385,125 @@ app.get('/monitor', (req, res) => {
           .timestamp {
             font-size: 0.7em;
             color: gray;
-            margin-top: 5px;
             text-align: right;
             margin-right: 10px;
           }
 
           .input-area {
-            margin-top: 10px;
             display: flex;
             gap: 10px;
+            padding: 10px;
+            background-color: #d9dede;
+            border-top: 1px solid #ccc;
           }
 
-          input[type=text], textarea {
+          input[type=text] {
+            flex: 1;
             padding: 10px;
-            width: 100%;
-            max-width: 400px;
             border: none;
             border-radius: 5px;
+            font-size: 1em;
           }
 
           button {
             padding: 10px 15px;
-            background: #25D366;
+            background-color: #25D366;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
           }
+
+          button:hover {
+            background-color: #1fa954;
+          }
         </style>
       </head>
       <body>
-        <h2>💼 Todos los Clientes</h2>
+        <div class="sidebar" style="overflow-y:auto;">
+          <h2>📞 Clientes</h2>
   `;
 
   for (const from in conversations) {
-    const chat = conversations[from];
-
+    const lastMsg = conversations[from].responses[conversations[from].responses.length - 1]?.text || "Nuevo cliente";
     html += `
-      <div class="chat-container">
-        <strong>Cliente: ${from}</strong><br />
-    `;
-
-    chat.responses.forEach(msg => {
-      const time = msg.timestamp.toLocaleTimeString();
-      if (msg.from === 'cliente') {
-        html += `
-          <div style="clear:both;">
-            <div class="message from-client">${msg.text}</div>
-            <small class="timestamp">${time}</small><br />
-          </div>`;
-      } else {
-        html += `
-          <div style="clear:both;">
-            <div class="message from-bot">${msg.text}</div>
-            <small class="timestamp">${time}</small><br />
-          </div>`;
-      }
-    });
-
-    // Campo para responder manualmente
-    html += `
-      <form class="input-area" action="/api/send" method="POST">
-        <input type="hidden" name="to" value="${from}" />
-        <input type="text" name="message" placeholder="Escribe tu mensaje..." required />
-        <button type="submit">Enviar</button>
-      </form>
-    </div>`;
+      <div class="chat-item" onclick="window.location.href='#${from}'; document.getElementById('${from}').scrollIntoView();">
+        <strong>${from}</strong><br />
+        <small>${lastMsg}</small>
+      </div>`;
   }
 
-  html += '</body></html>';
+  html += `
+        </div>
+
+        <div class="selected-chat">
+          <h2 id="chatName">Selecciona un chat</h2>
+          <div class="chat-messages" id="chatBox"></div>
+          <form class="input-area" id="chatForm">
+            <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
+            <button type="submit">Enviar</button>
+          </form>
+        </div>
+
+        <script>
+          // Cargar conversaciones si se pasa un hash en la URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const currentChat = window.location.hash.replace('#', '');
+
+          async function loadChats() {
+            const response = await fetch("/api/chats");
+            const chats = await response.json();
+
+            const container = document.getElementById("chatBox");
+            container.innerHTML = "";
+
+            if (!currentChat || !chats[currentChat]) {
+              container.innerHTML = "<p>Selecciona un cliente.</p>";
+              return;
+            }
+
+            const chat = chats[currentChat];
+            document.getElementById("chatName").innerText = "Cliente: " + currentChat;
+
+            chat.responses.forEach(msg => {
+              const msgDiv = document.createElement("div");
+              msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
+              msgDiv.innerText = msg.text;
+              container.appendChild(msgDiv);
+
+              const time = document.createElement("small");
+              time.className = "timestamp";
+              time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+              container.appendChild(time);
+            });
+
+            container.scrollTop = container.scrollHeight;
+          }
+
+          // Enviar mensaje al cliente
+          document.getElementById("chatForm").onsubmit = async (e) => {
+            e.preventDefault();
+            const message = document.getElementById("messageInput").value.trim();
+            if (!message || !currentChat) return;
+
+            await fetch("/api/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ to: currentChat, message })
+            });
+
+            document.getElementById("messageInput").value = "";
+            loadChats();
+          };
+
+          setInterval(loadChats, 10000); // Recargar automáticamente
+          window.onload = loadChats;
+        </script>
+      </body>
+    </html>
+  `;
 
   res.send(html);
-});
-
-// Ruta /api/chats – Devuelve todas las conversaciones en formato JSON
-app.get('/api/chats', (req, res) => {
-  res.send(conversations);
-});
-
-// Ruta /api/chat/:from – Devuelve un chat específico
-app.get('/api/chat/:from', (req, res) => {
-  const from = req.params.from;
-  res.send(conversations[from] || { responses: [] });
-});
-
-// Ruta /api/send – Permite enviar mensajes desde el asesor
-app.post('/api/send', express.json(), async (req, res) => {
-  const { to, message } = req.body;
-  if (!to || !message) return res.status(400).send("Faltan datos");
-
-  try {
-    await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
-      {
-        messaging_product: "whatsapp",
-        to,
-        text: { body: message },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
-        }
-      }
-    );
-
-    // Registrar mensaje del asesor
-    if (!conversations[to]) conversations[to] = { responses: [] };
-    conversations[to].responses.push({
-      from: 'bot',
-      text: message,
-      timestamp: new Date()
-    });
-
-    res.send({ status: "ok" });
-
-  } catch (err) {
-    console.error("🚨 Error al enviar mensaje:", err.message);
-    res.send({ status: "error", error: err.message });
-  }
 });
 
 // Puerto dinámico
