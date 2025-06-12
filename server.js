@@ -384,6 +384,7 @@ app.get('/monitor', (req, res) => {
             padding: 12px 16px;
             border-radius: 10px;
             word-wrap: break-word;
+            position: relative;
             line-height: 1.4em;
             clear: both;
             margin: 5px;
@@ -453,7 +454,7 @@ app.get('/monitor', (req, res) => {
   for (const from in conversations) {
     const lastMsg = conversations[from].responses[conversations[from].responses.length - 1]?.text || "Nuevo cliente";
     html += `
-      <div class="chat-item" onclick="window.location.href='#${from}';">
+      <div class="chat-item" onclick="openChat('${from}')">
         <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
         <div>
           <strong>${from}</strong><br />
@@ -513,10 +514,8 @@ app.get('/monitor', (req, res) => {
             chatBox.innerHTML = "";
 
             try {
-              const res = await fetch("/api/chats");
-              const chats = await res.json();
-              const chat = chats[from];
-
+              const res = await fetch("/api/chat/" + from);
+              const chat = await res.json();
               document.getElementById("chatName").innerText = from;
 
               if (!chat || !chat.responses || chat.responses.length === 0) {
@@ -566,7 +565,6 @@ app.get('/monitor', (req, res) => {
       </body>
     </html>
   `;
-
   res.send(html);
 });
 
