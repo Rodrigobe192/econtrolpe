@@ -466,7 +466,10 @@ app.get('/monitor', (req, res) => {
         </div>
 
         <div class="selected-chat">
-          <h2 id="chatName">Selecciona un chat</h2>
+          <div class="chat-header" id="chatHeader">
+            <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+            <span id="chatName">Selecciona un chat</span>
+          </div>
           <div class="chat-messages" id="chatBox"></div>
           <form class="input-area" id="chatForm">
             <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
@@ -478,25 +481,29 @@ app.get('/monitor', (req, res) => {
           let currentChat = null;
 
           async function loadChats() {
-            const res = await fetch("/api/chats");
-            const chats = await res.json();
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
 
-            const chatList = document.getElementById("chatList");
-            chatList.innerHTML = "";
+              const chatList = document.getElementById("chatList");
+              chatList.innerHTML = "";
 
-            for (const from in chats) {
-              const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
-              const item = document.createElement("div");
-              item.className = "chat-item";
-              item.innerHTML = \`
-                <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
-                <div>
-                  <strong>\${from}</strong><br />
-                  <small>\${lastMsg}</small>
-                </div>
-              \`;
-              item.onclick = () => openChat(from);
-              chatList.appendChild(item);
+              for (const from in chats) {
+                const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+                const item = document.createElement("div");
+                item.className = "chat-item";
+                item.innerHTML = \`
+                  <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+                  <div>
+                    <strong>\${from}</strong><br />
+                    <small>\${lastMsg}</small>
+                  </div>
+                \`;
+                item.onclick = () => openChat(from);
+                chatList.appendChild(item);
+              }
+            } catch (err) {
+              console.error("🚨 Error al cargar clientes:", err.message);
             }
           }
 
@@ -505,24 +512,34 @@ app.get('/monitor', (req, res) => {
             const chatBox = document.getElementById("chatBox");
             chatBox.innerHTML = "";
 
-            const res = await fetch(\`/api/chat/\${from}\`);
-            const chat = await res.json();
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
+              const chat = chats[from];
 
-            document.getElementById("chatName").innerText = from;
+              document.getElementById("chatName").innerText = from;
 
-            chat.responses.forEach(msg => {
-              const msgDiv = document.createElement("div");
-              msgDiv.className = msg.from === "cliente" ? "message from-client" : "message from-bot";
-              msgDiv.innerText = msg.text;
-              chatBox.appendChild(msgDiv);
+              if (!chat || !chat.responses || chat.responses.length === 0) {
+                chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
+                return;
+              }
 
-              const time = document.createElement("small");
-              time.className = "timestamp";
-              time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-              chatBox.appendChild(time);
-            });
+              chat.responses.forEach(msg => {
+                const msgDiv = document.createElement("div");
+                msgDiv.className = msg.from === "cliente" ? "message from-client" : "message from-bot";
+                msgDiv.innerText = msg.text;
+                chatBox.appendChild(msgDiv);
 
-            chatBox.scrollTop = chatBox.scrollHeight;
+                const time = document.createElement("small");
+                time.className = "timestamp";
+                time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+                chatBox.appendChild(time);
+              });
+
+              chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+              console.error("❌ Error al abrir chat:", err.message);
+            }
           }
 
           document.getElementById("chatForm").onsubmit = async (e) => {
@@ -553,18 +570,16 @@ app.get('/monitor', (req, res) => {
   res.send(html);
 });
 
-// Ruta /api/chats - Devuelve todas las conversaciones
+// Rutas del monitor web
 app.get('/api/chats', (req, res) => {
   res.json(conversations);
 });
 
-// Ruta /api/chat/:from - Devuelve un chat específico
 app.get('/api/chat/:from', (req, res) => {
   const from = req.params.from;
   res.json(conversations[from] || { responses: [] });
 });
 
-// Ruta /api/send - Permite responder desde el panel
 app.post('/api/send', express.json(), async (req, res) => {
   const { to, message } = req.body;
 
@@ -585,7 +600,7 @@ app.post('/api/send', express.json(), async (req, res) => {
       }
     );
 
-    // Guardar mensaje del asesor
+    // Registrar mensaje del asesor
     if (!conversations[to]) conversations[to] = { responses: [] };
     conversations[to].responses.push({
       from: 'bot',
@@ -604,5 +619,5 @@ app.post('/api/send', express.json(), async (req, res) => {
 // Puerto dinámico
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(\`🚀 Servidor corriendo en puerto \${PORT}\`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
