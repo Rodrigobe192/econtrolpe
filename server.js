@@ -306,7 +306,7 @@ app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
-        <title>📲 Monitor de Asesores</title>
+        <title>Econtrol Monitor</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
           body { height: 100vh; display: flex; background-color: #ece5dd; color: black; }
@@ -446,7 +446,7 @@ app.get('/monitor', (req, res) => {
       </head>
       <body>
         <div class="sidebar" style="overflow-y:auto;">
-          <h2>📞 Clientes</h2>
+          <h2>📞 CHATS</h2>
           <div id="chatList"></div>
         </div>
 
