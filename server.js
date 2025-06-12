@@ -72,12 +72,12 @@ async function sendTextMessage(to, text) {
       {
         messaging_product: "whatsapp",
         to,
-        text: { body: text },
+        text: { body: text }
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-        },
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
+        }
       }
     );
 
@@ -290,6 +290,7 @@ app.post('/webhook', async (req, res) => {
             "⚠️ Hubo un error guardando sus datos. Por favor, inténtelo más tarde."
           );
         }
+
         break;
     }
 
@@ -305,7 +306,6 @@ app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
-        <meta charset="UTF-8">
         <title>📲 Monitor de Asesores</title>
         <meta http-equiv="refresh" content="10"> <!-- Actualiza cada 10 segundos -->
         <style>
@@ -447,18 +447,26 @@ app.get('/monitor', (req, res) => {
       </head>
       <body>
         <div class="sidebar" style="overflow-y:auto;">
-          <div class="chat-header">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"  alt="Logo" style="width: 30px; height: 30px;" />
-            <span>Econtrol Bot</span>
-          </div>
-          <div class="chat-list" id="chatList"></div>
+          <h2>📞 Clientes</h2>
+  `;
+
+  for (const from in conversations) {
+    const lastMsg = conversations[from].responses[conversations[from].responses.length - 1]?.text || "Nuevo cliente";
+    html += `
+      <div class="chat-item" onclick="window.location.href='#${from}';">
+        <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+        <div>
+          <strong>${from}</strong><br />
+          <small>${lastMsg}</small>
+        </div>
+      </div>`;
+  }
+
+  html += `
         </div>
 
         <div class="selected-chat">
-          <div class="chat-header" id="chatHeader">
-            <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
-            <span id="chatName">Selecciona un chat</span>
-          </div>
+          <h2 id="chatName">Selecciona un chat</h2>
           <div class="chat-messages" id="chatBox"></div>
           <form class="input-area" id="chatForm">
             <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
@@ -470,29 +478,25 @@ app.get('/monitor', (req, res) => {
           let currentChat = null;
 
           async function loadChats() {
-            try {
-              const res = await fetch("/api/chats");
-              const chats = await res.json();
+            const res = await fetch("/api/chats");
+            const chats = await res.json();
 
-              const chatList = document.getElementById("chatList");
-              chatList.innerHTML = "";
+            const chatList = document.getElementById("chatList");
+            chatList.innerHTML = "";
 
-              for (const from in chats) {
-                const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
-                const item = document.createElement("div");
-                item.className = "chat-item";
-                item.innerHTML = \`
-                  <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
-                  <div>
-                    <strong>\${from}</strong><br>
-                    <small>\${lastMsg}</small>
-                  </div>
-                \`;
-                item.onclick = () => openChat(from);
-                chatList.appendChild(item);
-              }
-            } catch (err) {
-              console.error("🚨 Error al cargar clientes:", err.message);
+            for (const from in chats) {
+              const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+              const item = document.createElement("div");
+              item.className = "chat-item";
+              item.innerHTML = \`
+                <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
+                <div>
+                  <strong>\${from}</strong><br />
+                  <small>\${lastMsg}</small>
+                </div>
+              \`;
+              item.onclick = () => openChat(from);
+              chatList.appendChild(item);
             }
           }
 
@@ -501,34 +505,24 @@ app.get('/monitor', (req, res) => {
             const chatBox = document.getElementById("chatBox");
             chatBox.innerHTML = "";
 
-            try {
-              const res = await fetch("/api/chats");
-              const chats = await res.json();
-              const chat = chats[from];
+            const res = await fetch(\`/api/chat/\${from}\`);
+            const chat = await res.json();
 
-              document.getElementById("chatName").innerText = from;
+            document.getElementById("chatName").innerText = from;
 
-              if (!chat || !chat.responses || chat.responses.length === 0) {
-                chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
-                return;
-              }
+            chat.responses.forEach(msg => {
+              const msgDiv = document.createElement("div");
+              msgDiv.className = msg.from === "cliente" ? "message from-client" : "message from-bot";
+              msgDiv.innerText = msg.text;
+              chatBox.appendChild(msgDiv);
 
-              chat.responses.forEach(msg => {
-                const msgDiv = document.createElement("div");
-                msgDiv.className = msg.from === "cliente" ? "message from-client" : "message from-bot";
-                msgDiv.innerText = msg.text;
-                chatBox.appendChild(msgDiv);
+              const time = document.createElement("small");
+              time.className = "timestamp";
+              time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+              chatBox.appendChild(time);
+            });
 
-                const time = document.createElement("small");
-                time.className = "timestamp";
-                time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-                chatBox.appendChild(time);
-              });
-
-              chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (err) {
-              console.error("❌ Error al abrir chat:", err.message);
-            }
+            chatBox.scrollTop = chatBox.scrollHeight;
           }
 
           document.getElementById("chatForm").onsubmit = async (e) => {
@@ -570,26 +564,26 @@ app.get('/api/chat/:from', (req, res) => {
   res.json(conversations[from] || { responses: [] });
 });
 
-// Ruta /api/send - Permite enviar mensajes manuales
+// Ruta /api/send - Permite responder desde el panel
 app.post('/api/send', express.json(), async (req, res) => {
   const { to, message } = req.body;
+
   if (!to || !message) return res.status(400).json({ error: "Faltan datos" });
 
   try {
     await axios.post(
-      await axios.post(
-  `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
-  {
-    messaging_product: "whatsapp",
-    to,
-    text: { body: message },
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
-    }
-  }
-);
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
+      {
+        messaging_product: "whatsapp",
+        to,
+        text: { body: message }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
+        }
+      }
+    );
 
     // Guardar mensaje del asesor
     if (!conversations[to]) conversations[to] = { responses: [] };
