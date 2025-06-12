@@ -477,8 +477,8 @@ app.get('/monitor', (req, res) => {
                 const item = document.createElement("div");
                 item.className = "chat-item";
                 item.innerText = \`
-\${from}\nÚltimo mensaje: \${lastMsg}
-\`;
+                  \${from}\nÚltimo mensaje: \${lastMsg}
+                \`;
                 item.onclick = () => openChat(from);
                 chatList.appendChild(item);
               }
@@ -495,7 +495,6 @@ app.get('/monitor', (req, res) => {
             try {
               const res = await fetch("/api/chat/" + from);
               const chat = await res.json();
-
               document.getElementById("chatName").innerText = "Cliente: " + from;
 
               if (!chat.responses || chat.responses.length === 0) {
@@ -574,7 +573,6 @@ app.get('/monitor', (req, res) => {
 
   res.send(html);
 });
-
 // Rutas del monitor web
 app.get('/api/chats', (req, res) => {
   res.json(conversations);
