@@ -307,7 +307,6 @@ app.get('/monitor', (req, res) => {
     <html>
       <head>
         <title>📲 Monitor de Asesores</title>
-        <meta http-equiv="refresh" content="10"> <!-- ❌ Actualiza toda la página -->
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
           body { height: 100vh; display: flex; background-color: #ece5dd; color: black; }
@@ -384,7 +383,6 @@ app.get('/monitor', (req, res) => {
             padding: 12px 16px;
             border-radius: 10px;
             word-wrap: break-word;
-            position: relative;
             line-height: 1.4em;
             clear: both;
             margin: 5px;
@@ -449,26 +447,11 @@ app.get('/monitor', (req, res) => {
       <body>
         <div class="sidebar" style="overflow-y:auto;">
           <h2>📞 Clientes</h2>
-  `;
-
-  for (const from in conversations) {
-    const lastMsg = conversations[from].responses[conversations[from].responses.length - 1]?.text || "Nuevo cliente";
-    html += `
-      <div class="chat-item" onclick="openChat('${from}')">
-        <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
-        <div>
-          <strong>${from}</strong><br />
-          <small>${lastMsg}</small>
-        </div>
-      </div>`;
-  }
-
-  html += `
+          <div id="chatList"></div>
         </div>
 
         <div class="selected-chat">
           <div class="chat-header" id="chatHeader">
-            <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
             <span id="chatName">Selecciona un chat</span>
           </div>
           <div class="chat-messages" id="chatBox"></div>
@@ -493,13 +476,9 @@ app.get('/monitor', (req, res) => {
                 const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
                 const item = document.createElement("div");
                 item.className = "chat-item";
-                item.innerHTML = \`
-                  <img src="https://via.placeholder.com/40"  alt="Perfil" style="width: 40px; height: 40px;" />
-                  <div>
-                    <strong>\${from}</strong><br />
-                    <small>\${lastMsg}</small>
-                  </div>
-                \`;
+                item.innerText = \`
+\${from}\nÚltimo mensaje: \${lastMsg}
+\`;
                 item.onclick = () => openChat(from);
                 chatList.appendChild(item);
               }
@@ -517,7 +496,7 @@ app.get('/monitor', (req, res) => {
               const res = await fetch("/api/chat/" + from);
               const chat = await res.json();
 
-              document.getElementById("chatName").innerText = from;
+              document.getElementById("chatName").innerText = "Cliente: " + from;
 
               if (!chat.responses || chat.responses.length === 0) {
                 chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
@@ -560,8 +539,34 @@ app.get('/monitor', (req, res) => {
             }
           };
 
-          setInterval(loadChats, 10000); // Recargar automáticamente
-          window.onload = loadChats;
+          // Solo actualiza la lista lateral de clientes, NO el chat abierto
+          async function refreshChatsOnly() {
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
+
+              const chatList = document.getElementById("chatList");
+              chatList.innerHTML = "";
+
+              for (const from in chats) {
+                const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+                const item = document.createElement("div");
+                item.className = "chat-item";
+                item.innerText = \`
+\${from}\nÚltimo: \${lastMsg}
+\`;
+                item.onclick = () => openChat(from);
+                chatList.appendChild(item);
+              }
+            } catch (err) {
+              console.error("🚨 Error al refrescar clientes:", err.message);
+            }
+          }
+
+          window.onload = () => {
+            loadChats();
+            setInterval(refreshChatsOnly, 10000); // Recargar lista cada 10 segundos
+          };
         </script>
       </body>
     </html>
