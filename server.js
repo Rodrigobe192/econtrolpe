@@ -306,8 +306,8 @@ app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
-        <title>Econtrol Monitor</title>
-
+        <title>📲 Monitor de Asesores</title>
+        <meta http-equiv="refresh" content="10"> <!-- ❌ Actualiza toda la página -->
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
           body { height: 100vh; display: flex; background-color: #ece5dd; color: black; }
@@ -448,7 +448,7 @@ app.get('/monitor', (req, res) => {
       </head>
       <body>
         <div class="sidebar" style="overflow-y:auto;">
-          <h2>📞 CHATS</h2>
+          <h2>📞 Clientes</h2>
   `;
 
   for (const from in conversations) {
@@ -516,9 +516,10 @@ app.get('/monitor', (req, res) => {
             try {
               const res = await fetch("/api/chat/" + from);
               const chat = await res.json();
+
               document.getElementById("chatName").innerText = from;
 
-              if (!chat || !chat.responses || chat.responses.length === 0) {
+              if (!chat.responses || chat.responses.length === 0) {
                 chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
                 return;
               }
@@ -565,6 +566,7 @@ app.get('/monitor', (req, res) => {
       </body>
     </html>
   `;
+
   res.send(html);
 });
 
