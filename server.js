@@ -570,9 +570,10 @@ app.get('/monitor', (req, res) => {
       </body>
     </html>
   `;
-
   res.send(html);
 });
+
+
 // Rutas del monitor web
 app.get('/api/chats', (req, res) => {
   res.json(conversations);
