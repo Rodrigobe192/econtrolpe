@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
+
 const app = express();
 
 // Middleware
@@ -67,16 +68,16 @@ let conversations = {};
 async function sendTextMessage(to, text) {
   try {
     await axios.post(
-      `https://graph.facebook.com/v22.0/ ${process.env.PHONE_NUMBER_ID}/messages`,
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
       {
         messaging_product: "whatsapp",
         to,
-        text: { body: text },
+        text: { body: text }
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-        },
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
+        }
       }
     );
 
@@ -88,27 +89,8 @@ async function sendTextMessage(to, text) {
       timestamp: new Date()
     });
 
-    // Enviar mensaje a Google Sheets
-    await sendToSheet(to, 'Bot', text, 'bot');
-
   } catch (err) {
     console.error("🚨 Error al enviar mensaje:", err.message);
-  }
-}
-
-// Función para guardar en Google Sheets
-async function sendToSheet(from, name, text, fromType = "cliente") {
-  try {
-    await axios.post(process.env.APPS_SCRIPT_URL, {
-      from,
-      name: name || 'Anónimo',
-      text,
-      fromType,
-      timestamp: new Date().toISOString()
-    });
-    console.log("✅ Mensaje guardado en Google Sheets");
-  } catch (err) {
-    console.error("❌ Error al guardar en Sheets:", err.message);
   }
 }
 
@@ -147,6 +129,7 @@ app.post('/webhook', async (req, res) => {
   const message = body.entry[0].changes[0].value.messages[0];
   const from = message.from;
   let text = message.text?.body.toLowerCase().trim() || '';
+
   console.log("📩 Texto recibido:", text);
 
   // Iniciar si no tiene estado
@@ -168,9 +151,6 @@ app.post('/webhook', async (req, res) => {
       text: text,
       timestamp: new Date()
     });
-
-    // Guardar en Google Sheets
-    await sendToSheet(from, 'Desconocido', text, 'cliente');
   }
 
   try {
@@ -180,6 +160,7 @@ app.post('/webhook', async (req, res) => {
           from,
           "👋 ¡Buenos días/tardes/noches!\n\nBienvenido/a a Econtrol Saneamiento Ambiental.\n\n¿Podría indicarme su nombre completo?"
         );
+        user.state = STATE.NAME;
         break;
 
       case STATE.NAME:
@@ -238,7 +219,7 @@ app.post('/webhook', async (req, res) => {
         if (!serviceMatch) {
           await sendTextMessage(
             from,
-            "❌ Por favor, seleccione una opción válida."
+            "❌ Por favor, seleccione una opción válida:\n\n1. Desinsectación Integral\n2. Fumigación de mercaderías\n3. Control y Monitoreo de Roedores\n4. Desinfección de ambientes\n5. Limpieza de Cisterna/Reservorios\n6. Limpieza de Pozos Sépticos\n7. Mantenimiento de Trampas de Grasa\n8. Otro servicio"
           );
           break;
         }
@@ -285,13 +266,13 @@ app.post('/webhook', async (req, res) => {
         try {
           await axios.post(process.env.APPS_SCRIPT_URL, {
             from,
-            name: user.name || 'No proporcionado',
-            district: user.district || 'No proporcionado',
-            propertyType: user.propertyType || 'No proporcionado',
-            area: user.area || 'No proporcionado',
-            service: user.service || 'No seleccionado',
-            serviceType: user.serviceType || 'No seleccionado',
-            contact: user.contact || 'No definido'
+            name: user.name,
+            district: user.district,
+            propertyType: user.propertyType,
+            area: user.area,
+            service: user.service,
+            serviceType: user.serviceType,
+            contact: user.contact
           });
           console.log("✅ Datos enviados a Google Sheets");
 
@@ -309,8 +290,10 @@ app.post('/webhook', async (req, res) => {
             "⚠️ Hubo un error guardando sus datos. Por favor, inténtelo más tarde."
           );
         }
+
         break;
     }
+
   } catch (error) {
     console.error("💥 Error general:", error.message);
   }
@@ -323,7 +306,7 @@ app.get('/monitor', (req, res) => {
   let html = `
     <html>
       <head>
-        <title>📲 Monitor de Asesores</title>
+        <title>Econtrol Monitor</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
           body { height: 100vh; display: flex; background-color: #ece5dd; color: black; }
@@ -345,6 +328,12 @@ app.get('/monitor', (req, res) => {
             background-color: #075e54;
             font-weight: bold;
             gap: 10px;
+          }
+
+          .chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
           }
 
           .chat-list {
@@ -457,7 +446,7 @@ app.get('/monitor', (req, res) => {
       </head>
       <body>
         <div class="sidebar" style="overflow-y:auto;">
-          <h2>📞 Clientes</h2>
+          <h2>📞 CHATS</h2>
           <div id="chatList"></div>
         </div>
 
@@ -488,9 +477,8 @@ app.get('/monitor', (req, res) => {
                 const item = document.createElement("div");
                 item.className = "chat-item";
                 item.innerText = \`
-\${from}
-Último: \${lastMsg}
-\`;
+                  \${from}\nÚltimo mensaje: \${lastMsg}
+                \`;
                 item.onclick = () => openChat(from);
                 chatList.appendChild(item);
               }
@@ -505,9 +493,9 @@ app.get('/monitor', (req, res) => {
             chatBox.innerHTML = "";
 
             try {
-              const res = await fetch(\`/api/chat/\${from}\`);
+              const res = await fetch("/api/chat/" + from);
               const chat = await res.json();
-              document.getElementById("chatName").innerText = from;
+              document.getElementById("chatName").innerText = "Cliente: " + from;
 
               if (!chat.responses || chat.responses.length === 0) {
                 chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
@@ -550,14 +538,41 @@ app.get('/monitor', (req, res) => {
             }
           };
 
-          setInterval(loadChats, 10000); // Recargar lista de clientes
-          window.onload = loadChats;
+          // Solo actualiza la lista lateral de clientes, NO el chat abierto
+          async function refreshChatsOnly() {
+            try {
+              const res = await fetch("/api/chats");
+              const chats = await res.json();
+
+              const chatList = document.getElementById("chatList");
+              chatList.innerHTML = "";
+
+              for (const from in chats) {
+                const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+                const item = document.createElement("div");
+                item.className = "chat-item";
+                item.innerText = \`
+\${from}\nÚltimo: \${lastMsg}
+\`;
+                item.onclick = () => openChat(from);
+                chatList.appendChild(item);
+              }
+            } catch (err) {
+              console.error("🚨 Error al refrescar clientes:", err.message);
+            }
+          }
+
+          window.onload = () => {
+            loadChats();
+            setInterval(refreshChatsOnly, 10000); // Recargar lista cada 10 segundos
+          };
         </script>
       </body>
     </html>
   `;
   res.send(html);
 });
+
 
 // Rutas del monitor web
 app.get('/api/chats', (req, res) => {
@@ -571,11 +586,12 @@ app.get('/api/chat/:from', (req, res) => {
 
 app.post('/api/send', express.json(), async (req, res) => {
   const { to, message } = req.body;
+
   if (!to || !message) return res.status(400).json({ error: "Faltan datos" });
 
   try {
     await axios.post(
-      `https://graph.facebook.com/v22.0/ ${process.env.PHONE_NUMBER_ID}/messages`,
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
       {
         messaging_product: "whatsapp",
         to,
@@ -595,9 +611,6 @@ app.post('/api/send', express.json(), async (req, res) => {
       text: message,
       timestamp: new Date()
     });
-
-    // Enviar mensaje a Google Sheets
-    await sendToSheet(to, 'Asesor', message, 'bot');
 
     res.json({ status: "ok" });
 
