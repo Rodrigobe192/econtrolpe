@@ -1,3 +1,23 @@
+// Función para guardar mensajes del cliente en Google Sheets
+async function saveClientMessageToSheet(from, message) {
+  try {
+    await axios.post(process.env.APPS_SCRIPT_URL, {
+      from,
+      name: 'No especificado',
+      district: 'No especificado',
+      propertyType: 'No especificado',
+      area: 'No especificado',
+      service: 'No especificado',
+      serviceType: 'No especificado',
+      contact: 'No especificado',
+      text: message // El mensaje del cliente
+    });
+    console.log("✅ Mensaje guardado en Google Sheets");
+  } catch (err) {
+    console.error("❌ Error al guardar en Sheets:", err.message);
+  }
+}
+
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
