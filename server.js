@@ -68,7 +68,7 @@ let conversations = {};
 async function sendTextMessage(to, text) {
   try {
     await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
+      `https://graph.facebook.com/v22.0/ ${process.env.PHONE_NUMBER_ID}/messages`,
       {
         messaging_product: "whatsapp",
         to,
@@ -94,13 +94,39 @@ async function sendTextMessage(to, text) {
   }
 }
 
+// Función para guardar mensajes en Google Sheets
+async function saveClientMessageToSheet(from, message) {
+  try {
+    await axios.post(process.env.APPS_SCRIPT_URL, {
+      from,
+      name: userData[from]?.name || 'No especificado',
+      district: userData[from]?.district || 'No especificado',
+      propertyType: userData[from]?.propertyType || 'No especificado',
+      area: userData[from]?.area || 'No especificado',
+      service: userData[from]?.service || 'No especificado',
+      serviceType: userData[from]?.serviceType || 'No especificado',
+      contact: userData[from]?.contact || 'No especificado',
+      text: message,
+      timestamp: new Date().toISOString()
+    });
+    console.log("✅ Mensaje guardado en Google Sheets");
+  } catch (err) {
+    console.error("❌ Error al guardar en Sheets:", err.message);
+  }
+}
+
 // Webhook de verificación
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode && token && mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+  if (
+    mode &&
+    token &&
+    mode === 'subscribe' &&
+    token === process.env.VERIFY_TOKEN
+  ) {
     console.log("✅ Webhook verificado");
     res.status(200).send(challenge);
   } else {
@@ -129,7 +155,6 @@ app.post('/webhook', async (req, res) => {
   const message = body.entry[0].changes[0].value.messages[0];
   const from = message.from;
   let text = message.text?.body.toLowerCase().trim() || '';
-
   console.log("📩 Texto recibido:", text);
 
   // Iniciar si no tiene estado
@@ -144,13 +169,16 @@ app.post('/webhook', async (req, res) => {
     conversations[from] = { responses: [] };
   }
 
-  // Registrar mensaje del cliente
+  // Registrar mensaje del cliente Y GUARDARLO
   if (text && text !== '') {
     conversations[from].responses.push({
       from: 'cliente',
       text: text,
       timestamp: new Date()
     });
+
+    // Guardar mensaje en Google Sheets
+    await saveClientMessageToSheet(from, text);
   }
 
   try {
@@ -160,7 +188,6 @@ app.post('/webhook', async (req, res) => {
           from,
           "👋 ¡Buenos días/tardes/noches!\n\nBienvenido/a a Econtrol Saneamiento Ambiental.\n\n¿Podría indicarme su nombre completo?"
         );
-        user.state = STATE.NAME;
         break;
 
       case STATE.NAME:
@@ -219,7 +246,7 @@ app.post('/webhook', async (req, res) => {
         if (!serviceMatch) {
           await sendTextMessage(
             from,
-            "❌ Por favor, seleccione una opción válida:\n\n1. Desinsectación Integral\n2. Fumigación de mercaderías\n3. Control y Monitoreo de Roedores\n4. Desinfección de ambientes\n5. Limpieza de Cisterna/Reservorios\n6. Limpieza de Pozos Sépticos\n7. Mantenimiento de Trampas de Grasa\n8. Otro servicio"
+            "❌ Por favor, seleccione una opción válida."
           );
           break;
         }
@@ -262,7 +289,7 @@ app.post('/webhook', async (req, res) => {
 
         user.contact = contactMatch;
 
-        // Enviar datos a Google Sheets
+        // Enviar datos finales a Google Sheets
         try {
           await axios.post(process.env.APPS_SCRIPT_URL, {
             from,
@@ -274,7 +301,7 @@ app.post('/webhook', async (req, res) => {
             serviceType: user.serviceType,
             contact: user.contact
           });
-          console.log("✅ Datos enviados a Google Sheets");
+          console.log("✅ Datos completos enviados a Google Sheets");
 
           await sendTextMessage(
             from,
@@ -300,7 +327,6 @@ app.post('/webhook', async (req, res) => {
 
   res.sendStatus(200);
 });
-
 // Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
