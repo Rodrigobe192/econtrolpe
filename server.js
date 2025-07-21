@@ -307,6 +307,7 @@ app.get('/monitor', (req, res) => {
   <html>
   <head>
     <title>Monitor - Econtrol</title>
+    <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
@@ -339,6 +340,9 @@ app.get('/monitor', (req, res) => {
         background-color: #202c33;
         margin: 0;
         border-bottom: 1px solid #2a3942;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
       .chat-item {
@@ -368,6 +372,11 @@ app.get('/monitor', (req, res) => {
         align-items: center;
         font-size: 1em;
         border-bottom: 1px solid #2a3942;
+        gap: 10px;
+      }
+
+      .chat-header i {
+        font-size: 1.2em;
       }
 
       .chat-messages {
@@ -439,11 +448,14 @@ app.get('/monitor', (req, res) => {
         border: none;
         padding: 10px 16px;
         margin-left: 10px;
-        border-radius: 20px;
+        border-radius: 50%;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        height: 40px;
+        width: 40px;
+        font-size: 1em;
       }
 
       button:hover {
@@ -453,12 +465,13 @@ app.get('/monitor', (req, res) => {
   </head>
   <body>
     <div class="sidebar">
-      <h2><i class="fas fa-comments"></i> CHATS</h2>
+      <h2><i class="fab fa-whatsapp"></i> CHATS</h2>
       <div id="chatList"></div>
     </div>
 
     <div class="selected-chat">
       <div class="chat-header">
+        <i class="fas fa-user-circle"></i>
         <span id="chatName">Selecciona un chat</span>
       </div>
 
@@ -484,7 +497,7 @@ app.get('/monitor', (req, res) => {
             const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
             const item = document.createElement("div");
             item.className = "chat-item";
-            item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
+            item.innerHTML = `<strong><i class='fas fa-user'></i> ${from}</strong><br><small>Último: ${lastMsg}</small>`;
             item.onclick = () => openChat(from);
             chatList.appendChild(item);
           }
