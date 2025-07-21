@@ -307,9 +307,8 @@ app.get('/monitor', (req, res) => {
   <html>
   <head>
     <title>Monitor - Econtrol</title>
-    <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
+     <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
       * {
         box-sizing: border-box;
@@ -320,63 +319,50 @@ app.get('/monitor', (req, res) => {
         margin: 0;
         height: 100vh;
         display: flex;
-        background: #0d1418;
-        color: #111;
+        background-color: #f0f2f5;
       }
 
       .sidebar {
-        width: 350px;
-        background-color: #111b21;
-        color: white;
-        border-right: 1px solid #202c33;
-        display: flex;
-        flex-direction: column;
+        width: 320px;
+        background-color: #ffffff;
+        border-right: 1px solid #ddd;
         overflow-y: auto;
+        padding: 10px;
       }
 
       .sidebar h2 {
-        font-size: 1.1em;
-        padding: 15px;
-        background-color: #202c33;
-        margin: 0;
-        border-bottom: 1px solid #2a3942;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 1.2em;
+        color: #128c7e;
       }
 
       .chat-item {
-        padding: 15px;
-        border-bottom: 1px solid #2a3942;
+        padding: 12px;
+        margin-bottom: 8px;
+        border-radius: 8px;
         cursor: pointer;
-        transition: background 0.2s;
+        background-color: #e9ecef;
+        transition: 0.2s;
       }
 
       .chat-item:hover {
-        background-color: #2a3942;
+        background-color: #d1f0e2;
       }
 
       .selected-chat {
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: url('https://web.whatsapp.com/img/bg-chat-tile_7ebfa302b7ad53ddfcd62c223f03d3b1.png') repeat;
+        background-color: #efeae2;
       }
 
       .chat-header {
-        background-color: #202c33;
+        background-color: #128c7e;
         color: white;
-        padding: 15px 20px;
+        padding: 15px;
         font-weight: bold;
         display: flex;
         align-items: center;
-        font-size: 1em;
-        border-bottom: 1px solid #2a3942;
-        gap: 10px;
-      }
-
-      .chat-header i {
-        font-size: 1.2em;
       }
 
       .chat-messages {
@@ -385,61 +371,51 @@ app.get('/monitor', (req, res) => {
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 10px;
       }
 
       .message {
         max-width: 70%;
-        padding: 10px 14px;
-        border-radius: 7.5px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        border-radius: 10px;
         line-height: 1.4;
-        word-wrap: break-word;
         position: relative;
-        font-size: 0.95em;
-        display: inline-block;
+        word-wrap: break-word;
       }
 
       .from-client {
         background-color: white;
         align-self: flex-start;
         border-top-right-radius: 0;
-        color: black;
       }
 
       .from-bot {
-        background-color: #005c4b;
+        background-color: #dcf8c6;
         align-self: flex-end;
         border-top-left-radius: 0;
-        color: white;
       }
 
       .timestamp {
         font-size: 0.7em;
-        color: #999;
-        text-align: right;
+        color: gray;
         margin-top: 2px;
+        text-align: right;
       }
 
       .input-area {
         display: flex;
         padding: 10px;
-        background-color: #202c33;
-        border-top: 1px solid #2a3942;
+        background-color: #f0f2f5;
+        border-top: 1px solid #ddd;
       }
 
       input[type="text"] {
         flex: 1;
-        padding: 10px 14px;
+        padding: 10px 12px;
         font-size: 1em;
-        border: none;
+        border: 1px solid #ccc;
         border-radius: 20px;
         outline: none;
-        background-color: #2a3942;
-        color: white;
-      }
-
-      input::placeholder {
-        color: #ccc;
       }
 
       button {
@@ -448,14 +424,8 @@ app.get('/monitor', (req, res) => {
         border: none;
         padding: 10px 16px;
         margin-left: 10px;
-        border-radius: 50%;
+        border-radius: 20px;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 40px;
-        width: 40px;
-        font-size: 1em;
       }
 
       button:hover {
@@ -465,13 +435,12 @@ app.get('/monitor', (req, res) => {
   </head>
   <body>
     <div class="sidebar">
-      <h2><i class="fab fa-whatsapp"></i> CHATS</h2>
+      <h2>📞 CHATS</h2>
       <div id="chatList"></div>
     </div>
 
     <div class="selected-chat">
       <div class="chat-header">
-        <i class="fas fa-user-circle"></i>
         <span id="chatName">Selecciona un chat</span>
       </div>
 
@@ -479,7 +448,7 @@ app.get('/monitor', (req, res) => {
 
       <form class="input-area" id="chatForm">
         <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
-        <button type="submit"><i class="fas fa-paper-plane"></i></button>
+        <button type="submit">Enviar</button>
       </form>
     </div>
 
@@ -497,7 +466,7 @@ app.get('/monitor', (req, res) => {
             const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
             const item = document.createElement("div");
             item.className = "chat-item";
-            item.innerHTML = `<strong><i class='fas fa-user'></i> ${from}</strong><br><small>Último: ${lastMsg}</small>`;
+            item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
             item.onclick = () => openChat(from);
             chatList.appendChild(item);
           }
@@ -517,7 +486,7 @@ app.get('/monitor', (req, res) => {
           document.getElementById("chatName").innerText = "Cliente: " + from;
 
           if (!chat.responses || chat.responses.length === 0) {
-            chatBox.innerHTML = "<p style='color:white;'>No hay mensajes aún.</p>";
+            chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
             return;
           }
 
@@ -559,7 +528,7 @@ app.get('/monitor', (req, res) => {
 
       window.onload = () => {
         loadChats();
-        setInterval(loadChats, 10000);
+        setInterval(loadChats, 10000); // Actualiza lista cada 10s
       };
     </script>
   </body>
