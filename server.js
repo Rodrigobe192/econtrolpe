@@ -304,64 +304,90 @@ app.post('/webhook', async (req, res) => {
 // Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
-    <html>
+    <html lang="es">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Monitor - Econtrol</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <style>
       * {
         box-sizing: border-box;
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Segoe UI', Roboto, sans-serif;
       }
 
       body {
         margin: 0;
         height: 100vh;
         display: flex;
-        background-color: #f0f2f5;
+        background-color: #eae6df;
       }
 
       .sidebar {
-        width: 320px;
+        width: 380px;
         background-color: #ffffff;
-        border-right: 1px solid #ddd;
-        overflow-y: auto;
-        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #ccc;
+      }
+
+      .sidebar-header {
+        background-color: #f0f2f5;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .sidebar-header i {
+        color: #128c7e;
+        font-size: 1.5rem;
       }
 
       .sidebar h2 {
-        margin-bottom: 10px;
-        font-size: 1.2em;
+        font-size: 1.2rem;
+        margin: 0;
         color: #128c7e;
       }
 
+      .chat-list {
+        flex: 1;
+        overflow-y: auto;
+        background-color: #ffffff;
+      }
+
       .chat-item {
-        padding: 12px;
-        margin-bottom: 8px;
-        border-radius: 8px;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
         cursor: pointer;
-        background-color: #e9ecef;
-        transition: 0.2s;
+        transition: background 0.2s;
       }
 
       .chat-item:hover {
-        background-color: #d1f0e2;
+        background-color: #f0f2f5;
       }
 
       .selected-chat {
         flex: 1;
         display: flex;
         flex-direction: column;
-        background-color: #efeae2;
+        background-color: #e5ddd5;
+        position: relative;
       }
 
       .chat-header {
+        height: 60px;
         background-color: #128c7e;
         color: white;
-        padding: 15px;
-        font-weight: bold;
         display: flex;
         align-items: center;
+        padding: 0 20px;
+        font-weight: bold;
+        font-size: 1.1rem;
       }
 
       .chat-messages {
@@ -370,20 +396,21 @@ app.get('/monitor', (req, res) => {
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+        background-image: url("https://i.imgur.com/O1Ia0Yz.png");
+        background-repeat: repeat;
       }
 
       .message {
-        max-width: 70%;
-        padding: 12px 15px;
+        max-width: 60%;
+        padding: 10px 14px;
         margin-bottom: 10px;
-        border-radius: 10px;
-        line-height: 1.4;
+        border-radius: 8px;
         position: relative;
-        word-wrap: break-word;
+        font-size: 0.95rem;
       }
 
       .from-client {
-        background-color: white;
+        background-color: #ffffff;
         align-self: flex-start;
         border-top-right-radius: 0;
       }
@@ -395,59 +422,59 @@ app.get('/monitor', (req, res) => {
       }
 
       .timestamp {
-        font-size: 0.7em;
+        font-size: 0.7rem;
         color: gray;
-        margin-top: 2px;
         text-align: right;
+        margin-top: -5px;
       }
 
       .input-area {
         display: flex;
         padding: 10px;
-        background-color: #f0f2f5;
-        border-top: 1px solid #ddd;
+        background-color: #f0f0f0;
+        align-items: center;
       }
 
-      input[type="text"] {
+      input[type='text'] {
         flex: 1;
-        padding: 10px 12px;
-        font-size: 1em;
-        border: 1px solid #ccc;
+        padding: 10px 15px;
+        border: none;
         border-radius: 20px;
+        font-size: 1rem;
         outline: none;
       }
 
       button {
-        background-color: #25D366;
+        background-color: #128c7e;
         color: white;
         border: none;
-        padding: 10px 16px;
         margin-left: 10px;
-        border-radius: 20px;
+        padding: 10px 20px;
+        border-radius: 50%;
+        font-size: 1.1rem;
         cursor: pointer;
       }
 
       button:hover {
-        background-color: #1da851;
+        background-color: #0e6655;
       }
     </style>
   </head>
   <body>
     <div class="sidebar">
-      <h2>📞 CHATS</h2>
-      <div id="chatList"></div>
+      <div class="sidebar-header">
+        <i class="fas fa-comments"></i>
+        <h2>Chats</h2>
+      </div>
+      <div class="chat-list" id="chatList"></div>
     </div>
 
     <div class="selected-chat">
-      <div class="chat-header">
-        <span id="chatName">Selecciona un chat</span>
-      </div>
-
+      <div class="chat-header" id="chatName">Selecciona un chat</div>
       <div class="chat-messages" id="chatBox"></div>
-
       <form class="input-area" id="chatForm">
-        <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
-        <button type="submit">Enviar</button>
+        <input type="text" id="messageInput" placeholder="Escribe un mensaje..." required />
+        <button type="submit"><i class="fas fa-paper-plane"></i></button>
       </form>
     </div>
 
@@ -455,56 +482,44 @@ app.get('/monitor', (req, res) => {
       let currentChat = null;
 
       async function loadChats() {
-        try {
-          const res = await fetch("/api/chats");
-          const chats = await res.json();
-          const chatList = document.getElementById("chatList");
-          chatList.innerHTML = "";
+        const res = await fetch("/api/chats");
+        const chats = await res.json();
+        const chatList = document.getElementById("chatList");
+        chatList.innerHTML = "";
 
-          for (const from in chats) {
-            const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
-            const item = document.createElement("div");
-            item.className = "chat-item";
-            item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
-            item.onclick = () => openChat(from);
-            chatList.appendChild(item);
-          }
-        } catch (err) {
-          console.error("🚨 Error al cargar chats:", err.message);
+        for (const from in chats) {
+          const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+          const item = document.createElement("div");
+          item.className = "chat-item";
+          item.innerHTML = `<strong>${from}</strong><br><small>${lastMsg}</small>`;
+          item.onclick = () => openChat(from);
+          chatList.appendChild(item);
         }
       }
 
       async function openChat(from) {
         currentChat = from;
+        const res = await fetch("/api/chat/" + from);
+        const chat = await res.json();
         const chatBox = document.getElementById("chatBox");
+        document.getElementById("chatName").innerText = `Cliente: ${from}`;
+
         chatBox.innerHTML = "";
+        if (!chat.responses) return;
 
-        try {
-          const res = await fetch("/api/chat/" + from);
-          const chat = await res.json();
-          document.getElementById("chatName").innerText = "Cliente: " + from;
+        chat.responses.forEach((msg) => {
+          const msgDiv = document.createElement("div");
+          msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
+          msgDiv.innerText = msg.text;
+          chatBox.appendChild(msgDiv);
 
-          if (!chat.responses || chat.responses.length === 0) {
-            chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
-            return;
-          }
+          const time = document.createElement("div");
+          time.className = "timestamp";
+          time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+          chatBox.appendChild(time);
+        });
 
-          chat.responses.forEach(msg => {
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
-            msgDiv.innerText = msg.text;
-            chatBox.appendChild(msgDiv);
-
-            const time = document.createElement("div");
-            time.className = "timestamp";
-            time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-            chatBox.appendChild(time);
-          });
-
-          chatBox.scrollTop = chatBox.scrollHeight;
-        } catch (err) {
-          console.error("❌ Error al abrir chat:", err.message);
-        }
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
 
       document.getElementById("chatForm").onsubmit = async (e) => {
@@ -527,11 +542,12 @@ app.get('/monitor', (req, res) => {
 
       window.onload = () => {
         loadChats();
-        setInterval(loadChats, 10000); // Actualiza lista cada 10s
+        setInterval(loadChats, 10000);
       };
     </script>
   </body>
 </html>
+
   `;
   res.send(html);
 });
