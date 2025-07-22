@@ -11,6 +11,7 @@ const path = require('path');
 const CONV_FILE = path.join(__dirname, 'conversaciones.json');
 
 // Leer conversaciones guardadas al iniciar el servidor
+let userData = {};
 let conversations = {};
 if (fs.existsSync(CONV_FILE)) {
   try {
