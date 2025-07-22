@@ -5,6 +5,27 @@ const axios = require('axios');
 
 const app = express();
 
+const fs = require('fs');
+const path = require('path');
+
+const CONV_FILE = path.join(__dirname, 'conversaciones.json');
+
+// Leer conversaciones guardadas al iniciar el servidor
+let conversations = {};
+if (fs.existsSync(CONV_FILE)) {
+  try {
+    conversations = JSON.parse(fs.readFileSync(CONV_FILE, 'utf8'));
+  } catch (err) {
+    console.error('❌ Error al leer conversaciones.json:', err.message);
+    conversations = {};
+  }
+}
+
+// Función para guardar las conversaciones en el archivo
+function guardarConversaciones() {
+  fs.writeFileSync(CONV_FILE, JSON.stringify(conversations, null, 2), 'utf8');
+}
+
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -60,11 +81,6 @@ const CONTACT_OPTIONS_MAP = {
   '2': 'no, gracias'
 };
 
-// Almacenamiento temporal de datos
-let userData = {};
-let conversations = {};
-
-// Función para enviar mensaje de texto
 async function sendTextMessage(to, text) {
   try {
     await axios.post(
@@ -88,6 +104,9 @@ async function sendTextMessage(to, text) {
       text: text,
       timestamp: new Date()
     });
+
+    // 💾 Guardar conversación en el archivo JSON
+    guardarConversaciones();
 
   } catch (err) {
     console.error("🚨 Error al enviar mensaje:", err.message);
@@ -151,6 +170,7 @@ app.post('/webhook', async (req, res) => {
       text: text,
       timestamp: new Date()
     });
+      guardarConversaciones(); // 💾 Guardar después de recibir
   }
 
   try {
@@ -455,58 +475,59 @@ app.get('/monitor', (req, res) => {
     <script>
       let currentChat = null;
 
-      async function loadChats() {
-        try {
-          const res = await fetch("/api/chats");
-          const chats = await res.json();
-          const chatList = document.getElementById("chatList");
-          chatList.innerHTML = "";
+    async function loadChats() {
+  try {
+    const res = await fetch("/conversaciones"); // ← ahora cargamos desde el archivo persistente
+    const chats = await res.json();
+    const chatList = document.getElementById("chatList");
+    chatList.innerHTML = "";
 
-          for (const from in chats) {
-            const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
-            const item = document.createElement("div");
-            item.className = "chat-item";
-            item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
-            item.onclick = () => openChat(from);
-            chatList.appendChild(item);
-          }
-        } catch (err) {
-          console.error("🚨 Error al cargar chats:", err.message);
-        }
-      }
+    for (const from in chats) {
+      const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
+      item.onclick = () => openChat(from);
+      chatList.appendChild(item);
+    }
+  } catch (err) {
+    console.error("🚨 Error al cargar chats:", err.message);
+  }
+}
 
       async function openChat(from) {
-        currentChat = from;
-        const chatBox = document.getElementById("chatBox");
-        chatBox.innerHTML = "";
+  currentChat = from;
+  const chatBox = document.getElementById("chatBox");
+  chatBox.innerHTML = "";
 
-        try {
-          const res = await fetch("/api/chat/" + from);
-          const chat = await res.json();
-          document.getElementById("chatName").innerText = "Cliente: " + from;
+  try {
+    const res = await fetch("/conversaciones");
+    const allChats = await res.json();
+    const chat = allChats[from] || { responses: [] };
+    document.getElementById("chatName").innerText = "Cliente: " + from;
 
-          if (!chat.responses || chat.responses.length === 0) {
-            chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
-            return;
-          }
+    if (!chat.responses || chat.responses.length === 0) {
+      chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
+      return;
+    }
 
-          chat.responses.forEach(msg => {
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
-            msgDiv.innerText = msg.text;
-            chatBox.appendChild(msgDiv);
+    chat.responses.forEach(msg => {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
+      msgDiv.innerText = msg.text;
+      chatBox.appendChild(msgDiv);
 
-            const time = document.createElement("div");
-            time.className = "timestamp";
-            time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-            chatBox.appendChild(time);
-          });
+      const time = document.createElement("div");
+      time.className = "timestamp";
+      time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+      chatBox.appendChild(time);
+    });
 
-          chatBox.scrollTop = chatBox.scrollHeight;
-        } catch (err) {
-          console.error("❌ Error al abrir chat:", err.message);
-        }
-      }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  } catch (err) {
+    console.error("❌ Error al abrir chat:", err.message);
+  }
+}
 
       document.getElementById("chatForm").onsubmit = async (e) => {
         e.preventDefault();
@@ -587,4 +608,7 @@ app.post('/api/send', express.json(), async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
+app.get('/conversaciones', (req, res) => {
+  res.json(conversations);
 });
