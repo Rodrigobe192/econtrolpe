@@ -325,235 +325,306 @@ app.post('/webhook', async (req, res) => {
 // Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
-  <html>
-  <head>
-    <title>Monitor - Econtrol</title>
-     <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-    <style>
-      * {
-        box-sizing: border-box;
-        font-family: 'Roboto', sans-serif;
-      }
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor - Econtrol</title>
+  <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Roboto', sans-serif;
+    }
 
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      background-color: #f0f2f5;
+      overflow: hidden;
+    }
+
+    /* Sidebar - Lista de chats */
+    .sidebar {
+      width: 320px;
+      background-color: #ffffff;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 10px;
+      flex-shrink: 0;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 10px;
+      font-size: 1.2em;
+      color: #128c7e;
+    }
+
+    .chat-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #e9ecef;
+      transition: 0.2s;
+    }
+
+    .chat-item:hover {
+      background-color: #d1f0e2;
+    }
+
+    /* Chat seleccionado */
+    .selected-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #efeae2;
+    }
+
+    .chat-header {
+      background-color: #128c7e;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      line-height: 1.4;
+      position: relative;
+      word-wrap: break-word;
+    }
+
+    .from-client {
+      background-color: white;
+      align-self: flex-start;
+      border-top-right-radius: 0;
+    }
+
+    .from-bot {
+      background-color: #dcf8c6;
+      align-self: flex-end;
+      border-top-left-radius: 0;
+    }
+
+    .timestamp {
+      font-size: 0.7em;
+      color: gray;
+      margin-top: 2px;
+      text-align: right;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background-color: #f0f2f5;
+      border-top: 1px solid #ddd;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      outline: none;
+    }
+
+    button {
+      background-color: #25D366;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      margin-left: 10px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1da851;
+    }
+
+    /* Responsive: Pantallas pequeñas */
+    @media (max-width: 768px) {
       body {
-        margin: 0;
-        height: 100vh;
-        display: flex;
-        background-color: #f0f2f5;
+        flex-direction: column;
       }
 
       .sidebar {
-        width: 320px;
-        background-color: #ffffff;
-        border-right: 1px solid #ddd;
-        overflow-y: auto;
-        padding: 10px;
-      }
-
-      .sidebar h2 {
-        margin-bottom: 10px;
-        font-size: 1.2em;
-        color: #128c7e;
-      }
-
-      .chat-item {
-        padding: 12px;
-        margin-bottom: 8px;
-        border-radius: 8px;
-        cursor: pointer;
-        background-color: #e9ecef;
-        transition: 0.2s;
-      }
-
-      .chat-item:hover {
-        background-color: #d1f0e2;
+        width: 100%;
+        max-height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
       }
 
       .selected-chat {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background-color: #efeae2;
-      }
-
-      .chat-header {
-        background-color: #128c7e;
-        color: white;
-        padding: 15px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-      }
-
-      .chat-messages {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
+        height: 60vh;
       }
 
       .message {
-        max-width: 70%;
-        padding: 12px 15px;
-        margin-bottom: 10px;
-        border-radius: 10px;
-        line-height: 1.4;
-        position: relative;
-        word-wrap: break-word;
-      }
-
-      .from-client {
-        background-color: white;
-        align-self: flex-start;
-        border-top-right-radius: 0;
-      }
-
-      .from-bot {
-        background-color: #dcf8c6;
-        align-self: flex-end;
-        border-top-left-radius: 0;
-      }
-
-      .timestamp {
-        font-size: 0.7em;
-        color: gray;
-        margin-top: 2px;
-        text-align: right;
-      }
-
-      .input-area {
-        display: flex;
-        padding: 10px;
-        background-color: #f0f2f5;
-        border-top: 1px solid #ddd;
+        max-width: 85%; /* Ajuste para móviles */
       }
 
       input[type="text"] {
-        flex: 1;
-        padding: 10px 12px;
-        font-size: 1em;
-        border: 1px solid #ccc;
-        border-radius: 20px;
-        outline: none;
+        font-size: 0.95em;
+        padding: 8px 10px;
       }
 
       button {
-        background-color: #25D366;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        margin-left: 10px;
-        border-radius: 20px;
-        cursor: pointer;
+        padding: 8px 14px;
+        font-size: 0.95em;
       }
 
-      button:hover {
-        background-color: #1da851;
+      .chat-item {
+        padding: 10px;
+        font-size: 0.95em;
       }
-    </style>
-  </head>
-  <body>
-    <div class="sidebar">
-      <h2>📞 CHATS</h2>
-      <div id="chatList"></div>
+
+      .chat-header {
+        padding: 12px;
+        font-size: 1.1em;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sidebar {
+        max-height: 35vh;
+      }
+
+      .selected-chat {
+        height: 65vh;
+      }
+
+      .message {
+        font-size: 0.9em;
+        padding: 10px 12px;
+      }
+
+      .timestamp {
+        font-size: 0.65em;
+      }
+
+      input[type="text"] {
+        font-size: 0.9em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>📞 CHATS</h2>
+    <div id="chatList"></div>
+  </div>
+
+  <div class="selected-chat">
+    <div class="chat-header">
+      <span id="chatName">Selecciona un chat</span>
     </div>
 
-    <div class="selected-chat">
-      <div class="chat-header">
-        <span id="chatName">Selecciona un chat</span>
-      </div>
+    <div class="chat-messages" id="chatBox"></div>
 
-      <div class="chat-messages" id="chatBox"></div>
+    <form class="input-area" id="chatForm">
+      <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
 
-      <form class="input-area" id="chatForm">
-        <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." required />
-        <button type="submit">Enviar</button>
-      </form>
-    </div>
-
-    <script>
-      let currentChat = null;
+  <script>
+    let currentChat = null;
 
     async function loadChats() {
-  try {
-    const res = await fetch("/conversaciones"); // ← ahora cargamos desde el archivo persistente
-    const chats = await res.json();
-    const chatList = document.getElementById("chatList");
-    chatList.innerHTML = "";
+      try {
+        const res = await fetch("/conversaciones");
+        const chats = await res.json();
+        const chatList = document.getElementById("chatList");
+        chatList.innerHTML = "";
 
-    for (const from in chats) {
-      const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
-      const item = document.createElement("div");
-      item.className = "chat-item";
-      item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
-      item.onclick = () => openChat(from);
-      chatList.appendChild(item);
-    }
-  } catch (err) {
-    console.error("🚨 Error al cargar chats:", err.message);
-  }
-}
-
-      async function openChat(from) {
-  currentChat = from;
-  const chatBox = document.getElementById("chatBox");
-  chatBox.innerHTML = "";
-
-  try {
-    const res = await fetch("/conversaciones");
-    const allChats = await res.json();
-    const chat = allChats[from] || { responses: [] };
-    document.getElementById("chatName").innerText = "Cliente: " + from;
-
-    if (!chat.responses || chat.responses.length === 0) {
-      chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
-      return;
+        for (const from in chats) {
+          const lastMsg = chats[from].responses[chats[from].responses.length - 1]?.text || "Nuevo cliente";
+          const item = document.createElement("div");
+          item.className = "chat-item";
+          item.innerHTML = "<strong>" + from + "</strong><br><small>Último: " + lastMsg + "</small>";
+          item.onclick = () => openChat(from);
+          chatList.appendChild(item);
+        }
+      } catch (err) {
+        console.error("🚨 Error al cargar chats:", err.message);
+      }
     }
 
-    chat.responses.forEach(msg => {
-      const msgDiv = document.createElement("div");
-      msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
-      msgDiv.innerText = msg.text;
-      chatBox.appendChild(msgDiv);
+    async function openChat(from) {
+      currentChat = from;
+      const chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML = "";
 
-      const time = document.createElement("div");
-      time.className = "timestamp";
-      time.innerText = new Date(msg.timestamp).toLocaleTimeString();
-      chatBox.appendChild(time);
-    });
+      try {
+        const res = await fetch("/conversaciones");
+        const allChats = await res.json();
+        const chat = allChats[from] || { responses: [] };
+        document.getElementById("chatName").innerText = "Cliente: " + from;
 
-    chatBox.scrollTop = chatBox.scrollHeight;
-  } catch (err) {
-    console.error("❌ Error al abrir chat:", err.message);
-  }
-}
+        if (!chat.responses || chat.responses.length === 0) {
+          chatBox.innerHTML = "<p>No hay mensajes aún.</p>";
+          return;
+        }
 
-      document.getElementById("chatForm").onsubmit = async (e) => {
-        e.preventDefault();
-        const message = document.getElementById("messageInput").value.trim();
-        if (!message || !currentChat) return;
+        chat.responses.forEach(msg => {
+          const msgDiv = document.createElement("div");
+          msgDiv.className = "message " + (msg.from === "cliente" ? "from-client" : "from-bot");
+          msgDiv.innerText = msg.text;
+          chatBox.appendChild(msgDiv);
 
-        const response = await fetch("/api/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: currentChat, message })
+          const time = document.createElement("div");
+          time.className = "timestamp";
+          time.innerText = new Date(msg.timestamp).toLocaleTimeString();
+          chatBox.appendChild(time);
         });
 
-        const result = await response.json();
-        if (result.status === "ok") {
-          document.getElementById("messageInput").value = "";
-          openChat(currentChat);
-        }
-      };
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        console.error("❌ Error al abrir chat:", err.message);
+      }
+    }
 
-      window.onload = () => {
-        loadChats();
-        setInterval(loadChats, 10000); // Actualiza lista cada 10s
-      };
-    </script>
-  </body>
+    document.getElementById("chatForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const message = document.getElementById("messageInput").value.trim();
+      if (!message || !currentChat) return;
+
+      const response = await fetch("/api/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: currentChat, message })
+      });
+
+      const result = await response.json();
+      if (result.status === "ok") {
+        document.getElementById("messageInput").value = "";
+        openChat(currentChat);
+      }
+    };
+
+    window.onload = () => {
+      loadChats();
+      setInterval(loadChats, 10000); // Actualiza lista cada 10s
+    };
+  </script>
+</body>
 </html>
   `;
   res.send(html);
