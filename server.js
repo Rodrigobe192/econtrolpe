@@ -327,32 +327,60 @@ app.get('/monitor', (req, res) => {
   let html = `
 <html>
 <head>
-  <title>Econtrol Monitor</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor - Econtrol</title>
   <link rel="icon" href="https://web.whatsapp.com/favicon.ico" type="image/x-icon" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
       font-family: 'Roboto', sans-serif;
-      margin: 0;
-      padding: 0;
     }
 
     body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
       background-color: #f0f2f5;
-      color: #333;
-      font-size: 16px;
-      line-height: 1.6;
+      overflow: hidden;
     }
 
+    /* Sidebar - Lista de chats */
     .sidebar {
       width: 320px;
       background-color: #ffffff;
       border-right: 1px solid #ddd;
       overflow-y: auto;
       padding: 10px;
+      flex-shrink: 0;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 10px;
+      font-size: 1.2em;
+      color: #128c7e;
+    }
+
+    .chat-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #e9ecef;
+      transition: 0.2s;
+    }
+
+    .chat-item:hover {
+      background-color: #d1f0e2;
+    }
+
+    /* Chat seleccionado */
+    .selected-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #efeae2;
     }
 
     .chat-header {
@@ -431,7 +459,7 @@ app.get('/monitor', (req, res) => {
       background-color: #1da851;
     }
 
-    /* Responsive */
+    /* Responsive: Pantallas pequeñas */
     @media (max-width: 768px) {
       body {
         flex-direction: column;
@@ -470,6 +498,29 @@ app.get('/monitor', (req, res) => {
       .chat-header {
         padding: 12px;
         font-size: 1.1em;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sidebar {
+        max-height: 35vh;
+      }
+
+      .selected-chat {
+        height: 65vh;
+      }
+
+      .message {
+        font-size: 0.9em;
+        padding: 10px 12px;
+      }
+
+      .timestamp {
+        font-size: 0.65em;
+      }
+
+      input[type="text"] {
+        font-size: 0.9em;
       }
     }
   </style>
