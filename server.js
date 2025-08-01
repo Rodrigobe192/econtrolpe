@@ -394,12 +394,6 @@ app.post('/api/send', express.json(), async (req, res) => {
     res.json({ status: "error", error: err.message });
   }
 });
-
-// Puerto dinámico
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-});
 // Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
