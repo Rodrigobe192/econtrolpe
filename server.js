@@ -30,11 +30,20 @@ function guardarConversaciones() {
 
 // Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
+  const user = userData[from] || {};
+
   try {
     await axios.post(process.env.APPS_SCRIPT_URL, {
       from,
       fromType,
       text,
+      name: user.name || 'No especificado',
+      district: user.district || 'No especificado',
+      propertyType: user.propertyType || 'No especificado',
+      area: user.area || 'No especificado',
+      service: user.service || 'No especificado',
+      serviceType: user.serviceType || 'No especificado',
+      contact: user.contact || 'No especificado',
       timestamp: new Date().toISOString()
     });
     console.log("✅ Mensaje guardado en Google Sheets");
@@ -42,7 +51,6 @@ async function saveMessageToSheet(from, fromType, text) {
     console.error("❌ Error al guardar en Sheets:", err.message);
   }
 }
-
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
