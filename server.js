@@ -13,6 +13,7 @@ const CONV_FILE = path.join(__dirname, 'conversaciones.json');
 // Leer conversaciones guardadas al iniciar el servidor
 let userData = {};
 let conversations = {};
+
 if (fs.existsSync(CONV_FILE)) {
   try {
     conversations = JSON.parse(fs.readFileSync(CONV_FILE, 'utf8'));
@@ -25,6 +26,21 @@ if (fs.existsSync(CONV_FILE)) {
 // Función para guardar las conversaciones en el archivo
 function guardarConversaciones() {
   fs.writeFileSync(CONV_FILE, JSON.stringify(conversations, null, 2), 'utf8');
+}
+
+// Función para guardar mensajes en Google Sheets
+async function saveMessageToSheet(from, fromType, text) {
+  try {
+    await axios.post(process.env.APPS_SCRIPT_URL, {
+      from,
+      fromType,
+      text,
+      timestamp: new Date().toISOString()
+    });
+    console.log("✅ Mensaje guardado en Google Sheets");
+  } catch (err) {
+    console.error("❌ Error al guardar en Sheets:", err.message);
+  }
 }
 
 // Middleware
@@ -82,10 +98,12 @@ const CONTACT_OPTIONS_MAP = {
   '2': 'no, gracias'
 };
 
+// Función para enviar mensaje de texto
 async function sendTextMessage(to, text) {
   try {
+    // ✅ URL corregida: sin espacios extra
     await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, 
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
       {
         messaging_product: "whatsapp",
         to,
@@ -106,8 +124,11 @@ async function sendTextMessage(to, text) {
       timestamp: new Date()
     });
 
-    // 💾 Guardar conversación en el archivo JSON
+    // 💾 Guardar en JSON
     guardarConversaciones();
+
+    // 📥 Guardar en Google Sheets
+    await saveMessageToSheet(to, 'bot', text);
 
   } catch (err) {
     console.error("🚨 Error al enviar mensaje:", err.message);
@@ -171,7 +192,12 @@ app.post('/webhook', async (req, res) => {
       text: text,
       timestamp: new Date()
     });
-      guardarConversaciones(); // 💾 Guardar después de recibir
+
+    // 💾 Guardar en JSON
+    guardarConversaciones();
+
+    // 📥 Guardar en Google Sheets
+    await saveMessageToSheet(from, 'cliente', text);
   }
 
   try {
@@ -240,7 +266,7 @@ app.post('/webhook', async (req, res) => {
         if (!serviceMatch) {
           await sendTextMessage(
             from,
-            "❌ Por favor, seleccione una opción válida:\n\n1. Desinsectación Integral\n2. Fumigación de mercaderías\n3. Control y Monitoreo de Roedores\n4. Desinfección de ambientes\n5. Limpieza de Cisterna/Reservorios\n6. Limpieza de Pozos Sépticos\n7. Mantenimiento de Trampas de Grasa\n8. Otro servicio"
+            "❌ Por favor, seleccione una opción válida."
           );
           break;
         }
@@ -322,6 +348,58 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+// Ruta para cargar conversaciones en el monitor
+app.get('/conversaciones', (req, res) => {
+  res.json(conversations);
+});
+
+// Ruta /api/send - Permite responder desde el panel
+app.post('/api/send', express.json(), async (req, res) => {
+  const { to, message } = req.body;
+  if (!to || !message) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to,
+        text: { body: message }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
+        }
+      }
+    );
+
+    // Registrar mensaje del asesor
+    if (!conversations[to]) conversations[to] = { responses: [] };
+    conversations[to].responses.push({
+      from: 'bot',
+      text: message,
+      timestamp: new Date()
+    });
+
+    // 💾 Guardar en JSON
+    guardarConversaciones();
+
+    // 📥 Guardar en Google Sheets
+    await saveMessageToSheet(to, 'bot', message);
+
+    res.json({ status: "ok" });
+
+  } catch (err) {
+    console.error("🚨 Error al enviar mensaje:", err.message);
+    res.json({ status: "error", error: err.message });
+  }
+});
+
+// Puerto dinámico
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
 // Ruta /monitor - Interfaz web estilo WhatsApp Web
 app.get('/monitor', (req, res) => {
   let html = `
