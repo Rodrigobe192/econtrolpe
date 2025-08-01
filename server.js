@@ -30,22 +30,42 @@ function guardarConversaciones() {
 
 // Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
-  const user = userData[from] || {};
-
   try {
+    // Busca si ya existe un registro para este cliente
+    const existingRow = conversations[from];
+
+    if (!existingRow) {
+      // Si no existe, crea un nuevo registro
+      conversations[from] = {
+        from,
+        name: 'No especificado',
+        district: 'No especificado',
+        propertyType: 'No especificado',
+        area: 'No especificado',
+        service: 'No especificado',
+        serviceType: 'No especificado',
+        contact: 'No especificado'
+      };
+    }
+
+    // Actualiza el mensaje más reciente
+    conversations[from].lastMessage = text;
+
+    // Guarda en Google Sheets
     await axios.post(process.env.APPS_SCRIPT_URL, {
       from,
       fromType,
       text,
-      name: user.name || 'No especificado',
-      district: user.district || 'No especificado',
-      propertyType: user.propertyType || 'No especificado',
-      area: user.area || 'No especificado',
-      service: user.service || 'No especificado',
-      serviceType: user.serviceType || 'No especificado',
-      contact: user.contact || 'No especificado',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      name: conversations[from].name || 'No especificado',
+      district: conversations[from].district || 'No especificado',
+      propertyType: conversations[from].propertyType || 'No especificado',
+      area: conversations[from].area || 'No especificado',
+      service: conversations[from].service || 'No especificado',
+      serviceType: conversations[from].serviceType || 'No especificado',
+      contact: conversations[from].contact || 'No especificado'
     });
+
     console.log("✅ Mensaje guardado en Google Sheets");
   } catch (err) {
     console.error("❌ Error al guardar en Sheets:", err.message);
