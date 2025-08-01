@@ -70,7 +70,7 @@ async function saveMessageToSheet(from, fromType, text) {
   } catch (err) {
     console.error("❌ Error al guardar en Sheets:", err.message);
   }
-}
+} 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
