@@ -22,20 +22,13 @@ if (fs.existsSync(CONV_FILE)) {
     conversations = {};
   }
 }
-
-// Función para guardar las conversaciones en el archivo
-function guardarConversaciones() {
-  fs.writeFileSync(CONV_FILE, JSON.stringify(conversations, null, 2), 'utf8');
-}
-
-// Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
   try {
     // Busca si ya existe un registro para este cliente
     const existingRow = conversations[from];
 
     if (!existingRow) {
-      // Si no existe, crea un nuevo registro
+      // Si no existe, crea un nuevo registro y guarda el mensaje recibido
       conversations[from] = {
         from,
         name: 'No especificado',
@@ -44,18 +37,19 @@ async function saveMessageToSheet(from, fromType, text) {
         area: 'No especificado',
         service: 'No especificado',
         serviceType: 'No especificado',
-        contact: 'No especificado'
+        contact: 'No especificado',
+        lastMessage: text || 'No especificado'  // <-- aquí guardamos el mensaje
       };
+    } else {
+      // Si ya existe, actualizamos el mensaje más reciente
+      conversations[from].lastMessage = text || 'No especificado';
     }
-
-    // Actualiza el mensaje más reciente
-    conversations[from].lastMessage = text;
 
     // Guarda en Google Sheets
     await axios.post(process.env.APPS_SCRIPT_URL, {
       from,
       fromType,
-      text,
+      mensaje: conversations[from].lastMessage, // 🔹 lo enviamos con nombre 'mensaje'
       timestamp: new Date().toISOString(),
       name: conversations[from].name || 'No especificado',
       district: conversations[from].district || 'No especificado',
@@ -66,11 +60,11 @@ async function saveMessageToSheet(from, fromType, text) {
       contact: conversations[from].contact || 'No especificado'
     });
 
-    console.log("✅ Mensaje guardado en Google Sheets");
+    console.log("✅ Mensaje guardado en Google Sheets:", conversations[from].lastMessage);
   } catch (err) {
     console.error("❌ Error al guardar en Sheets:", err.message);
   }
-} 
+}
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
