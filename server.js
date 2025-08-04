@@ -201,8 +201,31 @@ app.post('/webhook', async (req, res) => {
 
   const message = body.entry[0].changes[0].value.messages[0];
   const from = message.from;
-  let text = message.text?.body.toLowerCase().trim() || '';
+  let text = '';
 
+switch (message.type) {
+  case 'text':
+    text = message.text.body.trim();
+    break;
+  case 'image':
+    text = '[Imagen recibida]';
+    break;
+  case 'audio':
+    text = '[Audio recibido]';
+    break;
+  case 'video':
+    text = '[Video recibido]';
+    break;
+  case 'document':
+    text = '[Documento recibido]';
+    break;
+  case 'location':
+    text = `[Ubicación: ${message.location.latitude}, ${message.location.longitude}]`;
+    break;
+  default:
+    text = '[Mensaje no textual]';
+    break;
+}
   console.log("📩 Texto recibido:", text);
 
   // Iniciar si no tiene estado
