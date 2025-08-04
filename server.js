@@ -31,11 +31,7 @@ function guardarConversaciones() {
 // ✅ Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
   try {
-    // Busca si ya existe un registro para este cliente
-    const existingRow = conversations[from];
-
-    if (!existingRow) {
-      // Si no existe, crea un nuevo registro y guarda el mensaje recibido
+    if (!conversations[from]) {
       conversations[from] = {
         from,
         name: 'No especificado',
@@ -45,21 +41,21 @@ async function saveMessageToSheet(from, fromType, text) {
         service: 'No especificado',
         serviceType: 'No especificado',
         contact: 'No especificado',
-        lastMessage: text || 'No especificado'
+        lastMessage: '[Sin texto]'
       };
-    } else {
-      // Si ya existe, actualizamos el mensaje más reciente
-      conversations[from].lastMessage = text || 'No especificado';
     }
 
-    // 💾 Guardar cambios en JSON local
+    // Siempre actualizar con lo que recibamos, aunque sea vacío
+    conversations[from].lastMessage = text && text.trim() !== '' ? text : '[Sin texto]';
+
+    // 💾 Guardar en JSON local
     guardarConversaciones();
 
-    // 📤 Guardar en Google Sheets
+    // 📤 Enviar a Google Sheets
     await axios.post(process.env.APPS_SCRIPT_URL, {
       from,
       fromType,
-      mensaje: conversations[from].lastMessage, // se envía como 'mensaje'
+      mensaje: conversations[from].lastMessage, // siempre con valor
       timestamp: new Date().toISOString(),
       name: conversations[from].name || 'No especificado',
       district: conversations[from].district || 'No especificado',
