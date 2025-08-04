@@ -22,6 +22,13 @@ if (fs.existsSync(CONV_FILE)) {
     conversations = {};
   }
 }
+
+// ✅ Función para guardar las conversaciones en el archivo
+function guardarConversaciones() {
+  fs.writeFileSync(CONV_FILE, JSON.stringify(conversations, null, 2), 'utf8');
+}
+
+// ✅ Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
   try {
     // Busca si ya existe un registro para este cliente
@@ -38,18 +45,21 @@ async function saveMessageToSheet(from, fromType, text) {
         service: 'No especificado',
         serviceType: 'No especificado',
         contact: 'No especificado',
-        lastMessage: text || 'No especificado'  // <-- aquí guardamos el mensaje
+        lastMessage: text || 'No especificado'
       };
     } else {
       // Si ya existe, actualizamos el mensaje más reciente
       conversations[from].lastMessage = text || 'No especificado';
     }
 
-    // Guarda en Google Sheets
+    // 💾 Guardar cambios en JSON local
+    guardarConversaciones();
+
+    // 📤 Guardar en Google Sheets
     await axios.post(process.env.APPS_SCRIPT_URL, {
       from,
       fromType,
-      mensaje: conversations[from].lastMessage, // 🔹 lo enviamos con nombre 'mensaje'
+      mensaje: conversations[from].lastMessage, // se envía como 'mensaje'
       timestamp: new Date().toISOString(),
       name: conversations[from].name || 'No especificado',
       district: conversations[from].district || 'No especificado',
