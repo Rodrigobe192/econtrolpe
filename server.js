@@ -196,9 +196,9 @@ app.post('/webhook', async (req, res) => {
   }
 
   const message = body.entry[0].changes[0].value.messages[0];
-  const from = message.from;
-  let text = '';
+const from = message.from;
 
+let text = '';
 switch (message.type) {
   case 'text':
     text = message.text.body.trim();
@@ -222,6 +222,21 @@ switch (message.type) {
     text = '[Mensaje no textual]';
     break;
 }
+
+// 📌 Guardar siempre en JSON local
+if (!conversations[from]) {
+  conversations[from] = { responses: [] };
+}
+conversations[from].responses.push({
+  from: 'cliente',
+  text: text,
+  timestamp: new Date()
+});
+guardarConversaciones();
+
+// 📌 Guardar siempre en Google Sheets, aunque no esté en flujo
+await saveMessageToSheet(from, 'cliente', text);
+  
   console.log("📩 Texto recibido:", text);
 
   // Iniciar si no tiene estado
