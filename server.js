@@ -31,42 +31,56 @@ function guardarConversaciones() {
 // ✅ Función para guardar mensajes en Google Sheets
 async function saveMessageToSheet(from, fromType, text) {
   try {
+    const user = userData[from] || {};
+    const mensajeFinal = text && text.trim() !== '' ? text : '[Sin texto]';
+
+    // 💾 Guardar siempre el último mensaje en memoria
     if (!conversations[from]) {
-      conversations[from] = {
+      conversations[from] = { lastMessage: mensajeFinal };
+    } else {
+      conversations[from].lastMessage = mensajeFinal;
+    }
+
+    guardarConversaciones();
+
+    let payload;
+
+    // 📌 Si el usuario NO está en flujo, guardamos solo mensaje suelto
+    if (!user.name && !user.district && !user.propertyType) {
+      payload = {
         from,
-        name: 'No especificado',
-        district: 'No especificado',
-        propertyType: 'No especificado',
-        area: 'No especificado',
-        service: 'No especificado',
-        serviceType: 'No especificado',
-        contact: 'No especificado',
-        lastMessage: '[Sin texto]'
+        fromType,
+        mensaje: mensajeFinal,
+        timestamp: new Date().toISOString(),
+        name: '',
+        district: '',
+        propertyType: '',
+        area: '',
+        service: '',
+        serviceType: '',
+        contact: ''
+      };
+    } else {
+      // 📌 Si está en flujo, guardamos todo
+      payload = {
+        from,
+        fromType,
+        mensaje: mensajeFinal,
+        timestamp: new Date().toISOString(),
+        name: user.name || '',
+        district: user.district || '',
+        propertyType: user.propertyType || '',
+        area: user.area || '',
+        service: user.service || '',
+        serviceType: user.serviceType || '',
+        contact: user.contact || ''
       };
     }
 
-    // Siempre actualizar con lo que recibamos, aunque sea vacío
-    conversations[from].lastMessage = text && text.trim() !== '' ? text : '[Sin texto]';
-
-    // 💾 Guardar en JSON local
-    guardarConversaciones();
-
     // 📤 Enviar a Google Sheets
-    await axios.post(process.env.APPS_SCRIPT_URL, {
-      from,
-      fromType,
-      mensaje: conversations[from].lastMessage, // siempre con valor
-      timestamp: new Date().toISOString(),
-      name: conversations[from].name || 'No especificado',
-      district: conversations[from].district || 'No especificado',
-      propertyType: conversations[from].propertyType || 'No especificado',
-      area: conversations[from].area || 'No especificado',
-      service: conversations[from].service || 'No especificado',
-      serviceType: conversations[from].serviceType || 'No especificado',
-      contact: conversations[from].contact || 'No especificado'
-    });
+    await axios.post(process.env.APPS_SCRIPT_URL, payload);
 
-    console.log("✅ Mensaje guardado en Google Sheets:", conversations[from].lastMessage);
+    console.log("✅ Mensaje guardado en Google Sheets:", mensajeFinal);
   } catch (err) {
     console.error("❌ Error al guardar en Sheets:", err.message);
   }
