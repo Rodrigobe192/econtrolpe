@@ -276,8 +276,6 @@ await saveMessageToSheet(from, 'cliente', text);
     // 💾 Guardar en JSON
     guardarConversaciones();
 
-    // 📥 Guardar en Google Sheets
-    await saveMessageToSheet(from, 'cliente', text);
   }
 
   try {
